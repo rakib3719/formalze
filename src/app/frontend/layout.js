@@ -1,8 +1,9 @@
 
 import SubNavbar from "@/components/shared/SubNavbar";
-import "./globals.css";
+import "./frontend.css";
 import Navbar from "@/components/shared/Navbar";
 import Sidebar from "@/components/shared/Sidebar";
+import FrontNavbar from "@/components/shared/FrontNabvar";
 
 
 
@@ -16,23 +17,16 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`antialiased font-outfit`}
+        className={`antialiased font-outfit -mt-24`}
+
+        
       >
 
 
-<Navbar/>
+<FrontNavbar/>
 
 
-<div className="flex justify-between">
-<Sidebar/>
-<div className="flex-1 relative">
-<SubNavbar/>
-<div className=" overflow-y-auto ">
 {children}
-</div>
-</div>
-
-</div>
 
 
     
