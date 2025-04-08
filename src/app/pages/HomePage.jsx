@@ -1,16 +1,18 @@
 import React from 'react';
 import img from '@/assets/images/home/Annotations.png'
 import Image from 'next/image';
+import Link from 'next/link';
+import { FaPlus } from 'react-icons/fa6';
 
 const HomePage = () => {
     return (
-        <div className='ml-[22%] mt-12 h-[calc(100vh-12rem)] flex justify-center py-20 flex-col'>
+        <div className='ml-[22%]  mt-24  min-h-screen flex justify-center py-20 flex-col'>
            
 <Image alt='image' src={img} className='mx-auto text-center'/>
 
-<button className='btn-primary mx-auto rounded-[10px] mt-4 px-6 py-3 w-[318px]'>
-                    Create a new form
-                </button>
+ <Link href={'/create-form'} className='btn-primary gap-2 cursor-pointer flex items-center w-[200px] mx-auto rounded-[10px] whitespace-nowrap px-6 py-3 '>
+          <FaPlus/>  Create a new form
+        </Link>
         </div>
     );
 };

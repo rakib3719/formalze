@@ -23,15 +23,15 @@ const Navbar = () => {
         }
 
     return (
-        <div className='flex custom-navbar-shadow font-outfit py-4 z-40 px-4 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
+        <div className='flex  custom-navbar-shadow font-outfit py-4 z-40 px-4 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
      
      {/* logo */}
       <section>
 
-<Image alt='logo' height={180} width={180} src={logoImg}/>
+<Image alt='logo' height={180} width={180} src={logoImg} className='w-24 lg:w-auto'/>
       </section>
       <section>
-<ul className='text-white flex gap-8'>
+<ul className='text-white mt-2 text-sm lg:text-lg flex gap-8'>
 
     <Link href={'/'}>Home</Link>
     <Link href={'/how-its-works'}>{`How it's Work`}</Link>
@@ -45,8 +45,8 @@ const Navbar = () => {
       </section>
       <section className='flex items-center justify-between '>
 
-      <IoIosNotificationsOutline className='text-[40px] text-white font-semibold' />
-      <FaRegCircleUser  className='text-[40px] text-white '/>
+      <IoIosNotificationsOutline className='mt-1 text-[30px]  lg:text-[40px] text-white font-semibold' />
+      <FaRegCircleUser  className='mt-1 text-[30px] lg:text-[40px] text-white '/>
       </section>
         </div>
     );
