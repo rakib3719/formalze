@@ -112,7 +112,7 @@ const getUserInfo = async (username, password) => {
 
     if (loginRes?.data) {
       const userId = loginRes.data.user_id;
-      const userInfo = await axios.get(`https://formlyze.mrshakil.com/api/users/list/${42}/`, {
+      const userInfo = await axios.get(`https://formlyze.mrshakil.com/api/users/list/${userId}/`, {
        
       });
 

@@ -72,13 +72,13 @@ const SignIn = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <label className="text-gray-600 block mb-1">Email or Username</label>
+              <label className="text-gray-600 block mb-1"> Username</label>
               <input
                 type="text"
                 name="emailOrUsername"
                 value={credentials.emailOrUsername}
                 onChange={handleChange}
-                placeholder="Enter your email or username"
+                placeholder="Enter your  username"
                 className="w-full text-black p-3 pr-10 border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
               <FaCircleCheck className="h-5 w-5 text-gray-400 absolute right-3 top-11" />
