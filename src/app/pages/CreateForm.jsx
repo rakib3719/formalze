@@ -10,31 +10,29 @@ import {
   FaHashtag,
   FaEnvelope,
   FaAlignLeft,
-  FaFont
+  FaFont,
+  FaGlobe,
+  FaSignature,
+  FaLink
 } from 'react-icons/fa';
 import axios from 'axios';
 import { useSession } from 'next-auth/react';
 import usePublicAxios from '@/hooks/usePublicAxios';
 import { toast, ToastContainer } from 'react-toastify';
 import useGetForm from '@/hooks/form/useGetForm';
+import { useRouter } from 'next/navigation';
 
 const CreateForm = () => {
-
   const session = useSession();
-
-
-
   const publicAxios = usePublicAxios()
   const {refetch} = useGetForm()
- 
   const user_id = session?.data?.user?.id;
-  console.log(user_id, 'id asca nire???');
-
+  
 
   const [form, setForm] = useState({
     title: '',
     created_by: user_id,
-    description: '' || "null",
+    description: '' ,
     fields: []
   });
 
@@ -44,14 +42,49 @@ const CreateForm = () => {
   const [currentSelectIndex, setCurrentSelectIndex] = useState(null);
   const fieldRefs = useRef([]);
 
+  const countryCodes = [
+    { code: '+1', name: 'USA' },
+    { code: '+44', name: 'UK' },
+    { code: '+91', name: 'India' },
+    { code: '+880', name: 'Bangladesh' },
+    { code: '+86', name: 'China' },
+    { code: '+81', name: 'Japan' },
+    { code: '+33', name: 'France' },
+    { code: '+49', name: 'Germany' },
+    { code: '+7', name: 'Russia' },
+    { code: '+61', name: 'Australia' },
+    { code: '+971', name: 'UAE' },
+  ];
+
+  const getDefaultHeading = (type) => {
+    const headings = {
+      text: 'Enter your answer',
+      textarea: 'Enter your response',
+      radio: 'Choose one option',
+      checkbox: 'Select all that apply',
+      dropdown: 'Select an option',
+      date: 'Select date',
+      time: 'Select time',
+      file: 'Upload your file',
+      number: 'Enter a number',
+      email: 'Enter your email',
+      address: 'Enter your address',
+      phone: 'Enter your phone number',
+      signature: 'Provide your signature',
+      url: 'Enter website URL'
+    };
+    return headings[type] || 'Untitled Question';
+  };
+
   const addNewField = () => {
     const newField = {
       id: Date.now(),
-      heading: 'Untitled Question',
+      heading: 'Untitled Question', // This will be updated when type is selected
       type: 'text',
       description: '',
       options: [],
-      required: false
+      required: false,
+      addressFields: []
     };
     setForm(prev => ({
       ...prev,
@@ -113,43 +146,72 @@ const CreateForm = () => {
     updateField(fieldIndex, updatedField);
   };
 
-  const publishForm = async() => {
+  const getDefaultAddressFields = () => {
+    return [
+      { id: Date.now() + 1, label: 'Street Address', required: true, value: '' },
+      { id: Date.now() + 2, label: 'Street Address Line 2', required: false, value: '' },
+      { id: Date.now() + 3, label: 'City', required: true, value: '' },
+      { id: Date.now() + 4, label: 'State/Province', required: true, value: '' },
+      { id: Date.now() + 5, label: 'Postal/Zip Code', required: true, value: '' },
+      { id: Date.now() + 6, label: 'Country', required: true, value: '' }
+    ];
+  };
 
+  const updateAddressField = (fieldIndex, addressFieldIndex, key, value) => {
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields[addressFieldIndex][key] = value;
+    updateField(fieldIndex, updatedField);
+  };
+
+  const removeAddressField = (fieldIndex, addressFieldIndex) => {
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields.splice(addressFieldIndex, 1);
+    updateField(fieldIndex, updatedField);
+  };
+  const router = useRouter()
+
+  const addCustomAddressField = (fieldIndex) => {
+    const newField = {
+      id: Date.now(),
+      label: 'New Field',
+      required: false,
+      value: ''
+    };
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields = [...updatedField.addressFields, newField];
+    updateField(fieldIndex, updatedField);
+  };
+
+  const publishForm = async() => {
     const newForm = {...form, created_by:user_id};
-    console.log(newForm, 'ki s omossa?');
-    console.log(newForm.created_by, 'na aslce maira lao');
+    
     if (!newForm.created_by) {
       toast.error('You must be logged in to create a form');
       return;
     }
 
     if(!newForm.description){
-      toast.error('descripotion must be needed');
+      toast.error('Description is required');
       return;
     }
+    
     if(!newForm.title){
-      toast.error('titile must be needed');
-      return
+      toast.error('Title is required');
+      return;
     }
 
-
-  
     try {
-
       if(user_id){
-       
-
-        const newForm = {...form, created_by:user_id}
         const resp = await publicAxios.post('/form/list/', newForm);
-
         if(resp.data.success === true) {
           toast.success('Form created successfully');
+          router.push('/my-all-form')
           refetch();
-      }
-      else{
-        toast.error('please login first')
-      }
-      
+       
+        }
+        else{
+          toast.error('Please login first');
+        }
       }
     } catch (error) {
       toast.error(error.message || 'Something went wrong - please try again later');
@@ -165,8 +227,12 @@ const CreateForm = () => {
     { value: 'date', label: 'Date', icon: <FaCalendarAlt className="text-gray-500 mr-2" /> },
     { value: 'time', label: 'Time', icon: <FaClock className="text-gray-500 mr-2" /> },
     { value: 'file', label: 'File Upload', icon: <FiImage className="text-gray-500 mr-2" /> },
-    { value: 'number', label: 'Number', icon: <FaHashtag className="text-gray-500 mr-2" /> },
-    { value: 'email', label: 'Email', icon: <FaEnvelope className="text-gray-500 mr-2" /> }
+    // { value: 'number', label: 'Number', icon: <FaHashtag className="text-gray-500 mr-2" /> },
+    { value: 'email', label: 'Email', icon: <FaEnvelope className="text-gray-500 mr-2" /> },
+    { value: 'address', label: 'Address', icon: <FaGlobe className="text-gray-500 mr-2" /> },
+    { value: 'phone', label: 'Phone Number', icon: <FaHashtag className="text-gray-500 mr-2" /> },
+    { value: 'signature', label: 'Signature', icon: <FaSignature className="text-gray-500 mr-2" /> },
+    { value: 'url', label: 'Website URL', icon: <FaLink className="text-gray-500 mr-2" /> }
   ];
 
   const toggleSelect = (index) => {
@@ -175,11 +241,19 @@ const CreateForm = () => {
   };
 
   const handleSelectChange = (index, value) => {
-    updateField(index, {
+    const defaultHeading = getDefaultHeading(value);
+    const updatedField = {
       ...form.fields[index],
       type: value,
+      heading: defaultHeading,
       options: ['radio', 'checkbox', 'dropdown'].includes(value) ? form.fields[index].options : []
-    });
+    };
+    
+    if (value === 'address') {
+      updatedField.addressFields = getDefaultAddressFields();
+    }
+    
+    updateField(index, updatedField);
     setIsSelectOpen(false);
   };
 
@@ -273,9 +347,90 @@ const CreateForm = () => {
         return (
           <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center">
             <button className="bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded text-sm">
-              Add file
+              Upload file
             </button>
           </div>
+        );
+      case 'address':
+        return (
+          <div className="border border-gray-200 rounded-lg p-4 space-y-4">
+            {field.addressFields?.map((addrField, addrIndex) => (
+              <div key={addrField.id} className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium text-gray-700">
+                    {addrField.label}
+                    {addrField.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  {addrField.label !== 'Street Address' && 
+                   addrField.label !== 'City' && 
+                   addrField.label !== 'State/Province' && 
+                   addrField.label !== 'Postal/Zip Code' && 
+                   addrField.label !== 'Country' && (
+                    <button 
+                      onClick={() => removeAddressField(index, addrIndex)}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <FiX size={16} />
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#1A1466] focus:border-[#1A1466]"
+                  placeholder={`Enter ${addrField.label.toLowerCase()}`}
+                  disabled
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => addCustomAddressField(index)}
+              className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm hover:bg-green-100"
+            >
+              Add Custom Field
+            </button>
+          </div>
+        );
+      case 'phone':
+        return (
+          <div className="flex items-center">
+            <div className="relative w-32 mr-2">
+              <select 
+                className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#1A1466] appearance-none bg-transparent"
+                disabled
+              >
+                {countryCodes.map((country, idx) => (
+                  <option key={idx} value={country.code}>
+                    {country.code} {country.name}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown className="absolute right-0 top-3 text-gray-400" />
+            </div>
+            <input
+              type="tel"
+              className="flex-1 border-b border-gray-300 py-2 focus:outline-none focus:border-[#1A1466]"
+              placeholder="Phone number"
+              disabled
+            />
+          </div>
+        );
+      case 'signature':
+        return (
+          <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center h-32 flex items-center justify-center">
+            <div className="text-center">
+              <FaSignature className="mx-auto text-gray-400 text-3xl mb-2" />
+              <p className="text-gray-500">Click to sign</p>
+            </div>
+          </div>
+        );
+      case 'url':
+        return (
+          <input
+            type="url"
+            className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#1A1466]"
+            placeholder="https://example.com"
+            disabled
+          />
         );
       default:
         return null;
@@ -398,6 +553,56 @@ const CreateForm = () => {
                         >
                           Add
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {field.type === 'address' && (
+                    <div className="space-y-4 mt-4 border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium text-gray-700">Address Fields</h4>
+                        <button
+                          onClick={() => addCustomAddressField(index)}
+                          className="px-3 py-1 bg-green-50 text-green-600 rounded text-sm hover:bg-green-100"
+                        >
+                          Add Custom Field
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {field.addressFields?.map((addrField, addrIndex) => (
+                          <div key={addrField.id} className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <input
+                                type="text"
+                                className="border-b border-gray-300 py-1 focus:outline-none focus:border-[#1A1466] w-1/2"
+                                value={addrField.label}
+                                onChange={(e) => updateAddressField(index, addrIndex, 'label', e.target.value)}
+                                placeholder="Field label"
+                                disabled={['Street Address', 'City', 'State/Province', 'Postal/Zip Code', 'Country'].includes(addrField.label)}
+                              />
+                              <div className="flex items-center space-x-4">
+                                <label className="flex items-center text-sm">
+                                  <input
+                                    type="checkbox"
+                                    className="mr-2"
+                                    checked={addrField.required}
+                                    onChange={(e) => updateAddressField(index, addrIndex, 'required', e.target.checked)}
+                                  />
+                                  Required
+                                </label>
+                                {!['Street Address', 'City', 'State/Province', 'Postal/Zip Code', 'Country'].includes(addrField.label) && (
+                                  <button
+                                    onClick={() => removeAddressField(index, addrIndex)}
+                                    className="text-gray-500 hover:text-red-500 p-1"
+                                  >
+                                    <FiTrash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

@@ -5,125 +5,142 @@ import CredentialsProvider from "next-auth/providers/credentials";
 const handler = NextAuth({
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   
-  secret: 'ksdjnvhrkjnvkljfdkljkfdk',  // This is your JWT secret, keep it secure
+  secret: process.env.NEXTAUTH_SECRET || 'ksdjnvhrkjnvkljfdkljkfdk',
 
   providers: [
     CredentialsProvider({
+      name: "Credentials",
       credentials: {
-        username: {},
-        password: {},
-        user_id: {},
-        token: {}
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+        user_id: { type: "text" },
+        token: { type: "text" }
       },
 
       async authorize(credentials) {
-        // Capture user_id and token from credentials (URL params)
-        const { user_id, token } = credentials;
+        try {
+          // Direct authentication with existing token
+          if (credentials.user_id && credentials.token) {
+            return {
+              id: credentials.user_id,
+              token: credentials.token,
+              email: '',
+              username: '',
+              phone: '',
+              address: '',
+              healthCareName: ''
+            };
+          }
 
-        if (user_id && token) {
-          // If user_id and token are present, directly return the user data
+          // Username/password authentication
+          if (!credentials.username || !credentials.password) {
+            throw new Error("Username and password are required");
+          }
 
-          console.log(user_id, token,'akhane jeheto asca');
+          const { user, token } = await getUserWithToken(credentials.username, credentials.password);
+          
+          if (!user || !token) {
+            throw new Error("Invalid credentials");
+          }
+
           return {
-            email: '',
-            username: '',
-            id: user_id,
-            phone: '',
-            address: '',
-            healthCareName: '',
-            token: token,
+            ...user,
+            token: token
           };
+
+        } catch (error) {
+          console.error("Authorization error:", error.message);
+          throw new Error(JSON.stringify({
+            error: error.message || "Login failed",
+            status: error.response?.status || 401
+          }));
         }
-
-        // Handle case where user_id or token is missing
-        if (!credentials.username || !credentials.password) {
-          throw new Error(JSON.stringify({ error: "Username and password are required." }));
-        }
-
-        const user = await getUserInfo(credentials.username, credentials.password);
-
-        if (!user) {
-          throw new Error(JSON.stringify({ error: "Invalid credentials." }));
-        }
-
-        // If successful, return the user info to be saved in JWT
-        return {
-          email: user.email,
-          username: user.username,
-          id: user.id,
-          phone: user.phone || '',
-          address: user?.address || '',
-          healthCareName: user?.healthCareName || '',
-          token: user.token
-        };
       }
     })
   ],
 
   callbacks: {
     async jwt({ token, user }) {
+      // Persist user data to token
       if (user) {
-        // Save user data in JWT
-        token.email = user.email;
-        token.username = user.username;
-        token.id = user.id;
-        token.phone = user.phone;
-        token.address = user?.address || '';
-        token.healthCareName = user?.healthCareName || '';
-        token.token = user.token;
+        token.user = {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          phone: user.phone,
+          address: user.address,
+          healthCareName: user.healthCareName,
+          token: user.token
+        };
       }
       return token;
     },
 
     async session({ session, token }) {
-      if (token) {
-        // Attach the JWT token info to the session object
-        session.user = {
-          email: token.email,
-          username: token.username,
-          id: token.id,
-          phone: token.phone,
-          address: token?.address || '',
-          healthCareName: token?.healthCareName || '',
-          token: token.token
-        };
+      // Send user properties to the client
+      if (token.user) {
+        session.user = token.user;
       }
       return session;
     }
   },
 
   pages: {
-    signIn: 'sign-in'
-  }
+    signIn: '/sign-in',
+    error: '/sign-in?error='
+  },
+
+  debug: process.env.NODE_ENV === 'development'
 });
 
 export { handler as GET, handler as POST };
 
-// Helper function
-const getUserInfo = async (username, password) => {
+// Enhanced helper function
+const getUserWithToken = async (username, password) => {
   try {
-    const user = { username, password };
+    // Step 1: Login to get token
+    const loginRes = await axios.post(
+      'https://formlyze.mrshakil.com/api/users/login/', 
+      { username, password }
+    );
 
-    const loginRes = await axios.post('https://formlyze.mrshakil.com/api/users/login/', user);
-    console.log(loginRes, 'loginres');
-
-    if (loginRes?.data) {
-      const userId = loginRes.data.user_id;
-      const userInfo = await axios.get(`https://formlyze.mrshakil.com/api/users/list/${userId}/`, {
-       
-      });
-
-      console.log(userInfo, 'okk vai');
-      return userInfo.data;
+    if (!loginRes?.data?.token || !loginRes?.data?.user_id) {
+      throw new Error("Invalid login response");
     }
 
-    return null;
+    const { token, user_id } = loginRes.data;
+
+    // Step 2: Get user details with the token
+    const userInfoRes = await axios.get(
+      `https://formlyze.mrshakil.com/api/users/list/${user_id}/`,
+      {
+        headers: {
+          'Authorization': `Token ${token}`
+        }
+      }
+    );
+
+    if (!userInfoRes?.data) {
+      throw new Error("Failed to fetch user info");
+    }
+
+    return {
+      user: {
+        id: user_id,
+        email: userInfoRes.data.email || '',
+        username: userInfoRes.data.username || '',
+        phone: userInfoRes.data.phone || '',
+        address: userInfoRes.data.address || '',
+        healthCareName: userInfoRes.data.healthCareName || ''
+      },
+      token: token
+    };
 
   } catch (error) {
-    console.error("Login error:", error.message);
-    return null;
+    console.error("Authentication error:", error);
+    throw error;
   }
 };

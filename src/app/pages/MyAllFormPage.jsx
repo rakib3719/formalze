@@ -5,7 +5,10 @@ import Loader from '@/components/shared/Loader';
 import NoDataAvailable from '@/components/shared/NoDataAvailable';
 import useGetForm from '@/hooks/form/useGetForm';
 import usePublicAxios from '@/hooks/usePublicAxios';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
+import { FaChartBar } from 'react-icons/fa';
 import { FaRegStar } from 'react-icons/fa6';
 import Swal from 'sweetalert2';
 
@@ -17,60 +20,65 @@ const MyAllFormPage = () => {
     console.log(data);
 
     const [checkedId, setCheckedId] = useState([])
+    const router = useRouter()
+    // const pushHadnle = (id)=>{
 
-    const allForm = [
-         {
-        id:1,
-        formName:'My Order New Form',
+    //     router.push(`formView/${id}`)
+    // }
 
-    },
-         {
-        id:2,
-        formName:'My Order New Form',
+//     const allForm = [
+//          {
+//         id:1,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:3,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:2,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:4,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:3,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:5,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:4,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:6,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:5,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:7,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:6,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:8,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:7,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:9,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:8,
+//         formName:'My Order New Form',
 
-    },
-         {
-        id:10,
-        formName:'My Order New Form',
+//     },
+//          {
+//         id:9,
+//         formName:'My Order New Form',
 
-    },
+//     },
+//          {
+//         id:10,
+//         formName:'My Order New Form',
 
-]
+//     },
+
+// ]
 
 // delte handaler
 const publicAxios = usePublicAxios()
@@ -152,7 +160,7 @@ const  chekcboxHandle = (e)=>{
  data && data.map((form)=> (
 
 
-       <div key={form.id} className='flex items-center dark:bg-white   border-b-[#00000059] border-b border-[#00000059] px-6 py-3'>
+       <div key={form.id} className='flex items-center dark:bg-white cursor-pointer  border-b-[#00000059] border-b border-[#00000059] px-6 py-3'>
 
 <div  className='' >
 <div className='space-x-3 flex items-center'>
@@ -164,10 +172,10 @@ name={form.id}
 id={form.id} 
 className='rounded text-lg cursor-pointer'/>
 <FaRegStar  className='text-[#000000]'/>
-<h1 className='text-lg text-black'>{form.title}</h1>
+<Link href={`formView/${form.unique_token}`}  className='text-lg cursor-pointer text-black'>{form.title}</Link>
 </div>
 </div>
-<div className='ml-auto'>
+<div className='ml-auto flex gap-8'>
 
 {
 checkedId.includes(form.id) && <button
@@ -178,6 +186,14 @@ Delete
 </button>
 }
 
+
+<Link 
+                                href={`/view-responses/${form.id}?title=${form.title}`}
+                                className="flex items-center gap-2 px-4 py-2 btn-primary text-white rounded hover:bg-[#0f0d3d] transition-colors"
+                            >
+                                <FaChartBar />
+                                View Responses
+                            </Link>
 
 <button className='btn-primary rounded ml-auto px-4 py-2 '>
 Edit

@@ -11,6 +11,7 @@ import Link from "next/link";
 
 const SignIn = () => {
   const router = useRouter();
+  const [loading, setLoading] = useState(false)
   const [credentials, setCredentials] = useState({
     emailOrUsername: "",
     password: ""
@@ -32,6 +33,7 @@ const SignIn = () => {
   console.log(session, 'session');
 
   const handleSubmit = async (e) => {
+    setLoading(true)
     e.preventDefault();
     setError("");
 
@@ -41,15 +43,20 @@ const SignIn = () => {
       redirect: false,
     });
 
+    if(res){
+      setLoading(false)
+    }
+
     if (res?.error) {
       try {
         const errorObj = JSON.parse(res.error);
         setError(errorObj.error || "Login failed.");
+        setLoading(false)
       } catch {
         setError("Login failed.");
       }
     } else {
-      router.push("/"); // 🔁 redirect to your dashboard or desired page
+      router.push("/"); 
     }
   };
 
@@ -103,7 +110,7 @@ const SignIn = () => {
               type="submit"
               className="w-full py-3 btn-auth text-white font-bold rounded-lg cursor-pointer hover:opacity-90 transition"
             >
-              Sign in
+          { loading ? "Loading..." :   "Sign in"}
             </button>
           </form>
 
