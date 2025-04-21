@@ -7,14 +7,18 @@ import React, { useEffect } from 'react';
 const AuthProvider = ({children, searchParams}) => {
     const queryClient = new QueryClient();
     const router = useRouter();
-
+ 
     const storeUserInfo = async(token, user_id) => {
         if(token && user_id) {
             const res = await signIn("credentials", {
                 user_id: user_id,
                 token: token,
                 redirect: false,
+
             });
+            if(res){
+                router.push('/')
+            }
             console.log(res,'resp');
         }
     }

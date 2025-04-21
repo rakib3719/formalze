@@ -18,7 +18,7 @@ const page = () => {
     }
     
     return (
-        <div className='px-8'>
+        <div className='px-2 lg:px-8'>
             <SingleResponse data={data}/>
         </div>
     );

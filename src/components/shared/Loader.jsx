@@ -1,9 +1,13 @@
 'use client'
+import { useSession } from 'next-auth/react';
 import React from 'react';
 
 const LoadingPage = () => {
+  const session = useSession();
+  const user = session?.data?.user;
+
   return (
-    <div className="flex ml-[20%] flex-col items-center justify-center min-h-screen bg-white">
+    <div className={`flex ${user ? 'lg:ml-[20%]' : ''} flex-col items-center justify-center min-h-screen bg-white`}>
       {/* Minimal Spinner */}
       <div className="w-12 h-12 border-4 border-[#1A1466] border-t-transparent rounded-full animate-spin mb-4"></div>
       

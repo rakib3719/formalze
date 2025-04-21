@@ -6,7 +6,7 @@ import { FaPlus } from 'react-icons/fa6';
 
 const HomePage = () => {
     return (
-        <div className='ml-[22%]  mt-24  min-h-screen flex justify-center py-20 flex-col'>
+        <div className='lg:ml-[22%]  mt-24  min-h-screen flex justify-center py-20 flex-col'>
            
 <Image alt='image' src={img} className='mx-auto text-center'/>
 

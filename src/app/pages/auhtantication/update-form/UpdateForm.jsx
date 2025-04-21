@@ -1,7 +1,6 @@
 'use client'
-import { Suspense } from 'react'
-import React, { useState, useRef, useEffect } from 'react'
-import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage } from 'react-icons/fi'
+import React, { useState, useRef, useEffect } from 'react';
+import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage } from 'react-icons/fi';
 import { 
   FaRegCircle, 
   FaRegCheckSquare, 
@@ -15,63 +14,38 @@ import {
   FaGlobe,
   FaSignature,
   FaLink
-} from 'react-icons/fa'
-import axios from 'axios'
-import { useSession } from 'next-auth/react'
-import usePublicAxios from '@/hooks/usePublicAxios'
-import { toast, ToastContainer } from 'react-toastify'
-import useGetForm from '@/hooks/form/useGetForm'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
-import { template } from '@/data/template/template'
+} from 'react-icons/fa';
+import axios from 'axios';
+import { useSession } from 'next-auth/react';
+import usePublicAxios from '@/hooks/usePublicAxios';
+import { toast, ToastContainer } from 'react-toastify';
+import useGetForm from '@/hooks/form/useGetForm';
+import { useRouter } from 'next/navigation';
+import ErrorPage from '@/components/shared/ErrorPage';
+import LoadingPage from '@/components/shared/Loader';
+import Link from 'next/link';
 
-// The main form content component that uses useSearchParams
-function FormEditorContent() {
-  const session = useSession()
+const UpdateForm = ({data, isLoading, error}) => {
+  const session = useSession();
   const publicAxios = usePublicAxios()
-  const { refetch } = useGetForm()
-  const user_id = session?.data?.user?.id
+  const {refetch} = useGetForm()
+  const user_id = session?.data?.user?.id;
   const [loading, setLoading] = useState(false)
   
-  const searchParams = useSearchParams()
-  const idParam = searchParams.get('id')
-  const id = idParam ? parseInt(idParam) : null
-
-  const templateForm = template
-  const dataForm = templateForm.find(data => data.id === id)
-
-  const [form, setForm] = useState({
-    title: '',
+  const initialForm = {
+    title: data?.form_name || '',
     created_by: user_id,
-    description: '',
-    fields: []
-  })
+    description: data?.description || '', 
+    fields: data?.fields || [],
+    is_active: true
+  };
 
-  // Initialize form with template data if ID exists
-  useEffect(() => {
-    if (id && dataForm) {
-      setForm({
-        title: dataForm.title,
-        created_by: user_id,
-        description: dataForm.description,
-        fields: dataForm.fields.map(field => ({
-          id: field.id || Date.now(),
-          heading: field.heading,
-          type: field.type,
-          description: field.description || '',
-          options: field.options || [],
-          required: field.required || false,
-          addressFields: field.addressFields || []
-        }))
-      })
-    }
-  }, [id, dataForm, user_id])
-
-  const [editingFieldIndex, setEditingFieldIndex] = useState(null)
-  const [newOptionText, setNewOptionText] = useState('')
-  const [isSelectOpen, setIsSelectOpen] = useState(false)
-  const [currentSelectIndex, setCurrentSelectIndex] = useState(null)
-  const fieldRefs = useRef([])
+  const [form, setForm] = useState(initialForm);
+  const [editingFieldIndex, setEditingFieldIndex] = useState(null);
+  const [newOptionText, setNewOptionText] = useState('');
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [currentSelectIndex, setCurrentSelectIndex] = useState(null);
+  const fieldRefs = useRef([]);
 
   const countryCodes = [
     { code: '+1', name: 'USA' },
@@ -85,7 +59,19 @@ function FormEditorContent() {
     { code: '+7', name: 'Russia' },
     { code: '+61', name: 'Australia' },
     { code: '+971', name: 'UAE' },
-  ]
+  ];
+
+  useEffect(() => {
+    if (data) {
+      setForm({
+        title: data.form_name,
+        created_by: user_id,
+        description: data.description,
+        fields: data.fields,
+        is_active: true
+      });
+    }
+  }, [data, user_id]);
 
   const getDefaultHeading = (type) => {
     const headings = {
@@ -103,9 +89,9 @@ function FormEditorContent() {
       phone: 'Enter your phone number',
       signature: 'Provide your signature',
       url: 'Enter website URL'
-    }
-    return headings[type] || 'Untitled Question'
-  }
+    };
+    return headings[type] || 'Untitled Question';
+  };
 
   const addNewField = () => {
     const newField = {
@@ -116,66 +102,66 @@ function FormEditorContent() {
       options: [],
       required: false,
       addressFields: []
-    }
+    };
     setForm(prev => ({
       ...prev,
       fields: [...prev.fields, newField]
-    }))
-    const newIndex = form.fields.length
-    setEditingFieldIndex(newIndex)
-  }
+    }));
+    const newIndex = form.fields.length;
+    setEditingFieldIndex(newIndex);
+  };
 
   useEffect(() => {
     if (editingFieldIndex !== null && fieldRefs.current[editingFieldIndex]) {
       fieldRefs.current[editingFieldIndex].scrollIntoView({
         behavior: 'smooth',
         block: 'nearest'
-      })
+      });
     }
-  }, [editingFieldIndex, form.fields.length])
+  }, [editingFieldIndex, form.fields.length]);
 
   const updateField = (index, updatedField) => {
-    const updatedFields = [...form.fields]
-    updatedFields[index] = updatedField
+    const updatedFields = [...form.fields];
+    updatedFields[index] = updatedField;
     setForm(prev => ({
       ...prev,
       fields: updatedFields
-    }))
-  }
+    }));
+  };
 
   const deleteField = (index) => {
-    const updatedFields = form.fields.filter((_, i) => i !== index)
+    const updatedFields = form.fields.filter((_, i) => i !== index);
     setForm(prev => ({
       ...prev,
       fields: updatedFields
-    }))
+    }));
     if (editingFieldIndex === index) {
-      setEditingFieldIndex(null)
+      setEditingFieldIndex(null);
     } else if (editingFieldIndex > index) {
-      setEditingFieldIndex(editingFieldIndex - 1)
+      setEditingFieldIndex(editingFieldIndex - 1);
     }
-  }
+  };
 
   const addOption = (fieldIndex) => {
-    if (!newOptionText.trim()) return
+    if (!newOptionText.trim()) return;
     
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.options = [...updatedField.options, newOptionText]
-    updateField(fieldIndex, updatedField)
-    setNewOptionText('')
-  }
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.options = [...updatedField.options, newOptionText];
+    updateField(fieldIndex, updatedField);
+    setNewOptionText('');
+  };
 
   const removeOption = (fieldIndex, optionIndex) => {
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.options = updatedField.options.filter((_, i) => i !== optionIndex)
-    updateField(fieldIndex, updatedField)
-  }
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.options = updatedField.options.filter((_, i) => i !== optionIndex);
+    updateField(fieldIndex, updatedField);
+  };
 
   const updateOption = (fieldIndex, optionIndex, value) => {
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.options[optionIndex] = value
-    updateField(fieldIndex, updatedField)
-  }
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.options[optionIndex] = value;
+    updateField(fieldIndex, updatedField);
+  };
 
   const getDefaultAddressFields = () => {
     return [
@@ -185,22 +171,20 @@ function FormEditorContent() {
       { id: Date.now() + 4, label: 'State/Province', required: true, value: '' },
       { id: Date.now() + 5, label: 'Postal/Zip Code', required: true, value: '' },
       { id: Date.now() + 6, label: 'Country', required: true, value: '' }
-    ]
-  }
+    ];
+  };
 
   const updateAddressField = (fieldIndex, addressFieldIndex, key, value) => {
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.addressFields[addressFieldIndex][key] = value
-    updateField(fieldIndex, updatedField)
-  }
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields[addressFieldIndex][key] = value;
+    updateField(fieldIndex, updatedField);
+  };
 
   const removeAddressField = (fieldIndex, addressFieldIndex) => {
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.addressFields.splice(addressFieldIndex, 1)
-    updateField(fieldIndex, updatedField)
-  }
-
-  const router = useRouter()
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields.splice(addressFieldIndex, 1);
+    updateField(fieldIndex, updatedField);
+  };
 
   const addCustomAddressField = (fieldIndex) => {
     const newField = {
@@ -208,53 +192,49 @@ function FormEditorContent() {
       label: 'New Field',
       required: false,
       value: ''
-    }
-    const updatedField = { ...form.fields[fieldIndex] }
-    updatedField.addressFields = [...updatedField.addressFields, newField]
-    updateField(fieldIndex, updatedField)
-  }
+    };
+    const updatedField = { ...form.fields[fieldIndex] };
+    updatedField.addressFields = [...updatedField.addressFields, newField];
+    updateField(fieldIndex, updatedField);
+  };
 
-  const publishForm = async() => {
-    const newForm = {...form, created_by: user_id}
-    setLoading(true)
+  const router = useRouter();
+
+  const updateForm = async () => {
+    const updatedForm = {
+      ...form,
+      created_by: user_id,
+      is_active: true
+    };
+    setLoading(true);
     
-    if (!newForm.created_by) {
-      toast.error('You must be logged in to create a form')
-      setLoading(false)
-      return
+    if (!updatedForm.created_by) {
+      toast.error('You must be logged in to update a form');
+      setLoading(false);
+      return;
     }
 
-    if(!newForm.description){
-      toast.error('Description is required')
-      setLoading(false)
-      return
+    if(!updatedForm.description) {
+      toast.error('Description is required');
+      setLoading(false);
+      return;
     }
     
-    if(!newForm.title){
-      toast.error('Title is required')
-      setLoading(false)
-      return
+    if(!updatedForm.title) {
+      toast.error('Title is required');
+      setLoading(false);
+      return;
     }
 
-    try {
-      if(user_id){
-        const resp = await publicAxios.post('/form/list/', newForm)
-        if(resp.data.success === true) {
-          setLoading(false)
-          toast.success('Form created successfully')
-          router.push('/my-all-form')
-          refetch()
-        }
-        else{
-          setLoading(false)
-          toast.error('Please login first')
-        }
-      }
-    } catch (error) {
-      setLoading(false)
-      toast.error(error.message || 'Something went wrong - please try again later')
+   if(user_id){
+    const resp = await publicAxios.put(`/form/list/${data.id}/`, updatedForm);
+    if(resp.status === 200){
+        toast.success('Updated successfully')
+        refetch()
+        router.push('/my-all-form')
     }
-  }
+   }
+  };
 
   const fieldTypes = [
     { value: 'text', label: 'Short Answer', icon: <FaFont className="text-[#1A1466] mr-2" /> },
@@ -270,29 +250,29 @@ function FormEditorContent() {
     { value: 'phone', label: 'Phone Number', icon: <FaHashtag className="text-[#1A1466] mr-2" /> },
     { value: 'signature', label: 'Signature', icon: <FaSignature className="text-[#1A1466] mr-2" /> },
     { value: 'url', label: 'Website URL', icon: <FaLink className="text-[#1A1466] mr-2" /> }
-  ]
+  ];
 
   const toggleSelect = (index) => {
-    setIsSelectOpen(!isSelectOpen)
-    setCurrentSelectIndex(index)
-  }
+    setIsSelectOpen(!isSelectOpen);
+    setCurrentSelectIndex(index);
+  };
 
   const handleSelectChange = (index, value) => {
-    const defaultHeading = getDefaultHeading(value)
+    const defaultHeading = getDefaultHeading(value);
     const updatedField = {
       ...form.fields[index],
       type: value,
       heading: defaultHeading,
       options: ['radio', 'checkbox', 'dropdown'].includes(value) ? form.fields[index].options : []
-    }
+    };
     
     if (value === 'address') {
-      updatedField.addressFields = getDefaultAddressFields()
+      updatedField.addressFields = getDefaultAddressFields();
     }
     
-    updateField(index, updatedField)
-    setIsSelectOpen(false)
-  }
+    updateField(index, updatedField);
+    setIsSelectOpen(false);
+  };
 
   const renderFieldInput = (field, index) => {
     switch (field.type) {
@@ -306,7 +286,7 @@ function FormEditorContent() {
             placeholder={field.type === 'email' ? 'email@example.com' : field.type === 'number' ? '123' : 'Your answer'}
             disabled
           />
-        )
+        );
       case 'textarea':
         return (
           <textarea
@@ -315,7 +295,7 @@ function FormEditorContent() {
             rows={3}
             disabled
           />
-        )
+        );
       case 'radio':
         return (
           <div className="space-y-2">
@@ -333,7 +313,7 @@ function FormEditorContent() {
               </div>
             )}
           </div>
-        )
+        );
       case 'checkbox':
         return (
           <div className="space-y-2">
@@ -351,7 +331,7 @@ function FormEditorContent() {
               </div>
             )}
           </div>
-        )
+        );
       case 'dropdown':
         return (
           <div className="relative">
@@ -363,7 +343,7 @@ function FormEditorContent() {
             </select>
             <FiChevronDown className="absolute right-0 top-3 text-[#1A1466]" />
           </div>
-        )
+        );
       case 'date':
         return (
           <input
@@ -371,7 +351,7 @@ function FormEditorContent() {
             className="w-full border-b border-[#CCCAEC] py-2 focus:outline-none focus:border-[#1A1466] bg-transparent"
             disabled
           />
-        )
+        );
       case 'time':
         return (
           <input
@@ -379,7 +359,7 @@ function FormEditorContent() {
             className="w-full border-b border-[#CCCAEC] py-2 focus:outline-none focus:border-[#1A1466] bg-transparent"
             disabled
           />
-        )
+        );
       case 'file':
         return (
           <div className="border-2 border-dashed border-[#CCCAEC] rounded p-4 text-center">
@@ -387,7 +367,7 @@ function FormEditorContent() {
               Upload file
             </button>
           </div>
-        )
+        );
       case 'address':
         return (
           <div className="border border-[#CCCAEC] rounded-lg p-4 space-y-4 bg-[#F4F4FF]">
@@ -426,7 +406,7 @@ function FormEditorContent() {
               Add Custom Field
             </button>
           </div>
-        )
+        );
       case 'phone':
         return (
           <div className="flex items-center">
@@ -450,7 +430,7 @@ function FormEditorContent() {
               disabled
             />
           </div>
-        )
+        );
       case 'signature':
         return (
           <div className="border-2 border-dashed border-[#CCCAEC] rounded p-4 text-center h-32 flex items-center justify-center bg-[#F4F4FF]">
@@ -459,7 +439,7 @@ function FormEditorContent() {
               <p className="text-[#1A1466]">Click to sign</p>
             </div>
           </div>
-        )
+        );
       case 'url':
         return (
           <input
@@ -468,33 +448,37 @@ function FormEditorContent() {
             placeholder="https://example.com"
             disabled
           />
-        )
+        );
       default:
-        return null
+        return null;
     }
+  };
+
+  if(isLoading) {
+    return <LoadingPage/>;
+  }
+
+  if(error) {
+    return <ErrorPage message='Something went wrong! Please refresh this page or log in again!!!'/>;
   }
 
   return (
-    <div className=' px-4 lg:px-8 xl:ml-[20%] lg:ml-[25%] '>
-      <div className=" text-black mt-28 rounded-2xl border border-[#1A1466] overflow-hidden mb-8 bg-white">
+    <div className=' px-4 md:px-8 xl:ml-[20%] lg:ml-[25%]'>
+      <div className="text-black mt-28 rounded-2xl border border-[#1A1466] overflow-hidden mb-8 bg-white">
         {/* Form Header */}
-        <div className="bg-gradient-to-r from-[#1A1466] to-[#8886CD] px-4 lg:px-6 py-5">
-          <div className="sm:flex  justify-between items-center">
+        <div className="bg-gradient-to-r from-[#1A1466] to-[#8886CD] px-6 py-5">
+          <div className="flex justify-between items-center">
             <div className="flex items-center">
               <div className="bg-white p-2 rounded-full shadow-sm mr-3">
                 <FiEdit2 className="text-[#1A1466] text-lg" />
               </div>
-              <h1 className=" text-lg md:text-2xl font-bold text-white">
-                {id ? `Using Template: ${dataForm?.title}` : 'Create New Form'}
+              <h1 className="text-lg lg:text-2xl font-bold text-white">
+                Update Form: {form.title}
               </h1>
-            </div>
-
-            <div className='h-4 md:hidden w-full'>
-
             </div>
             <Link
               href={'/classic-form'}
-              className="bg-white   text-[#1A1466] text-xs font-semibold px-3 cursor-pointer py-1 rounded-full whitespace-nowrap shadow-sm hover:bg-gray-100"
+              className="bg-white hidden sm:flex whitespace-nowrap text-[#1A1466] text-xs font-semibold px-3 cursor-pointer py-1 rounded-full shadow-sm hover:bg-gray-100"
             >
               Use Template
             </Link>
@@ -502,19 +486,19 @@ function FormEditorContent() {
         </div>
 
         {/* Form Content */}
-        <div className=" px-3 md:px-6 py-5">
+        <div className="px-3 lg:px-6 py-5">
           {/* Form Title and Description */}
-          <div className="mb-8 p-6 bg-[#F4F4FF] rounded-lg border border-[#CCCAEC]">
+          <div className="mb-8 p-4 lg:p-6 bg-[#F4F4FF] rounded-lg border border-[#CCCAEC]">
             <input
               type="text"
-              className="w-full text-lg md:text-2xl font-bold border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent"
+              className="w-full text-2xl font-bold border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent"
               placeholder="Form Title"
               value={form.title}
               onChange={(e) => setForm({...form, title: e.target.value})}
             />
             <input
               type="text"
-              className="w-full text-sm md:text-lg font-medium border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent mt-4"
+              className="w-full font-medium border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent mt-4"
               placeholder="Form Description"
               required
               value={form.description}
@@ -535,7 +519,7 @@ function FormEditorContent() {
                     <div className="md:flex justify-between">
                       <input
                         type="text"
-                        className="w-full md:text-lg font-bold border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-1 bg-transparent"
+                        className="w-full text-lg font-bold border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-1 bg-transparent"
                         value={field.heading}
                         onChange={(e) => updateField(index, {...field, heading: e.target.value})}
                       />
@@ -706,12 +690,12 @@ function FormEditorContent() {
                     <div className="flex justify-between items-start">
                       <div className="flex items-start">
                         <div className="bg-white flex items-center p-2 rounded-lg border border-[#CCCAEC] mr-3 mt-0.5">
-                          <span className='ml-2'>
+                          <span className='md:ml-2'>
                             {fieldTypes.find(type => type.value === field.type)?.icon}
                           </span>
                         </div>
                         <div>
-                          <h3 className="md:text-lg mt-2 md:mt-0 font-bold text-[#1A1466]">
+                          <h3 className="text-lg font-bold text-[#1A1466]">
                             {field.heading || 'Untitled Question'}
                           </h3>
                           {field.description && (
@@ -719,7 +703,7 @@ function FormEditorContent() {
                           )}
                         </div>
                       </div>
-                      <div className="flex mt-2 md:mt-0 space-x-2">
+                      <div className="flex space-x-2">
                         <button
                           onClick={() => setEditingFieldIndex(index)}
                           className="p-1 text-[#1A1466] hover:bg-[#E9E9FD] rounded"
@@ -747,7 +731,7 @@ function FormEditorContent() {
 
             <button
               onClick={addNewField}
-              className="flex fixed    right-8 md:right-24 top-3/5 p-3 items-center cursor-pointer bg-[#1A1466] rounded-full mt-8  shadow-lg hover:bg-[#0e0b3d] transition-colors"
+              className="flex fixed right-12 md:right-24 mt-16 top-3/5 p-3 items-center cursor-pointer bg-[#1A1466] rounded-full shadow-lg hover:bg-[#0e0b3d] transition-colors"
             >
               <FiPlus className="text-white text-2xl" />
             </button>
@@ -755,26 +739,17 @@ function FormEditorContent() {
 
           <div className="mt-8 flex justify-start">
             <button
-              onClick={publishForm}
+              onClick={updateForm}
               className="px-6 py-2 cursor-pointer bg-[#1A1466] text-white rounded-md shadow hover:bg-[#0e0b3d]"
             >
-              {loading ? 'Publishing...' : "Publish Form"}
+              {loading ? 'Updating...' : "Update Form"}
             </button>
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-// Main page component with Suspense boundary
-export default function CreateFormPage() {
-  return (
-    <>
-      <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading form editor...</div>}>
-        <FormEditorContent />
-      </Suspense>
       <ToastContainer />
-    </>
-  )
-}
+    </div>
+  );
+};
+
+export default UpdateForm;

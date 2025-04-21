@@ -2,7 +2,7 @@ import React from 'react';
 
 const ErrorPage = ({ message = "Something went wrong!" }) => {
   return (
-    <div className="flex flex-col ml-[20%] items-center justify-center min-h-screen bg-gray-50 p-4 text-center">
+    <div className="flex flex-col lg:ml-[20%] items-center justify-center min-h-screen bg-gray-50 p-4 text-center">
       {/* Error Icon */}
       <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
         <svg 

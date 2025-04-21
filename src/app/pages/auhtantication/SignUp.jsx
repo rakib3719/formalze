@@ -53,8 +53,10 @@ return params;
       redirect(`https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=${googleCallbackUri}&prompt=consent&response_type=code&client_id=${googleClientId}&scope=openid%20email%20profile&access_type=offline`)
     }
     console.log(googleCallbackUri, googleClientId);
-    
 
+  
+    
+// https://formlyze.mrshakil.com/api/v1/auth/google/callback/?code=4%2F0Ab_5qlmxErtmY4i2GzFCG4-K6KGhzpWfIS5yeHwVW5pHGCLUrBuqWcgB42_2niKVIKddtw&scope=email+profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=consent
   }
 
   const [formData, setFormData] = useState({
@@ -229,9 +231,12 @@ return params;
   };
 
   return (
-    <div className="min-h-screen overflow-hidden relative">
-      <div className="flex justify-center lg:mt-32 xl:mt-44">
+    <div className=" mb-24 overflow-hidden relative">
+      <div className="flex mb-24  justify-center lg:mt-32 xl:mt-44">
+        <Link href={'/'} className="cursor-pointer ">
+        
         <Image src={logo} alt="logo" height={180} width={180} className="absolute top-4 left-4" />
+        </Link>
         <Image alt="bg" src={bg} className="absolute top-0 -right-32 overflow-auto h-[60%]" />
         <Image alt="bg" src={bg2} className="absolute -left-[30%] bottom-0 h-[60%]" />
 
@@ -248,7 +253,7 @@ return params;
             <button 
              onClick={googleLogin}
               type="button"
-              className="flex items-center cursor-pointer justify-center gap-2 text-[#000000] bg-[#E4E4E4] py-2 px-4 rounded-lg w-[48%]"
+              className="flex items-center cursor-pointer justify-center gap-2 text-[#000000] bg-[#E4E4E4] py-2 px-4 rounded-lg w-full"
             >
               <FaGoogle /> Use a Google account
             </button>

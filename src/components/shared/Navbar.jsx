@@ -11,13 +11,13 @@ import { signOut, useSession } from 'next-auth/react';
 import usePublicAxios from '@/hooks/usePublicAxios';
 
 const Navbar = () => {
+    // Hooks and state
     const pathname = usePathname();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const session = useSession();
-    const user =  session?.data?.user;
-    console.log('User details:', user);
- 
     const profileRef = useRef(null);
+    const session = useSession();
+    const user = session?.data?.user;
+    const publicAxios = usePublicAxios();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -26,117 +26,159 @@ const Navbar = () => {
                 setIsProfileOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    if (pathname.includes('/sign-in') || pathname.includes('/sign-up') || pathname.includes('/frontend')) {
+    // Handle logout functionality
+    const handleLogout = async () => {
+        try {
+            const resp = await publicAxios.post('/users/logout/', null, {
+                headers: { 'Authorization': `Token ${user?.token}` }
+            });
+            
+            if(resp?.status === 200) {
+                await signOut({ redirect: false });
+                window.location.href = '/sign-in';
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Proceed with logout even if API fails
+            await signOut({ redirect: false });
+            window.location.href = '/sign-in';
+        }
+    };
+    if( pathname.includes('/formView') && !user){
         return null;
     }
-const publicAxios = usePublicAxios()
 
-
-const handleLogout = async () => {
-
-  const token = user?.token;
-  console.log(token,'token to asei mama');
-
-  try {
-  const resp =   await publicAxios.post('/users/logout/', null, {
-      headers: {
-        'Authorization': `Token ${token}`
-      }
-    });
-    if(resp?.status === 200){
-        await signOut({ redirect: false });
-     window.location.href = '/sign-in';
-
-        
+    // Don't render navbar on auth pages
+    if ( pathname.includes('/sign-in') || pathname.includes('/sign-up') || pathname.includes('/frontend')  ) {
+        return null;
     }
-    console.log('Log out details:', resp);
-  } catch (error) {
-    console.log('Logout API error (proceeding anyway)', error);
-  }
 
-//   await signOut({ redirect: false });
-//   window.location.href = '/sign-in';
-};
+    // Navigation links data
+    const navLinks = [
+        { href: '/', label: 'Home' },
+        { href: '/how-its-works', label: 'How it\'s Work' },
+        { href: '/feature', label: 'Feature' },
+        { href: '/templates', label: 'Templates' },
+        { href: '/pricing', label: 'Pricing' },
+        { href: '/my-form', label: 'My Form' }
+    ];
 
     return (
-        <div className='flex custom-navbar-shadow font-outfit py-4 z-40 px-4 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
-            {/* logo */}
-            <section>
+        <header className='flex custom-navbar-shadow font-outfit py-4 z-40 px-2 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
+            {/* Logo */}
+
+
+
+                
+            {/* Logo Section */}
+            <div>
+              <Link
+              href={'/'}
+              className='cursor-pointer mt-16 lg:mt-0 ml-32 lg:ml-0'>
                 <Image 
-                    alt='logo' 
+                    alt='FormLazy Logo' 
                     height={180} 
                     width={180} 
                     src={logoImg} 
-                    className='w-24 lg:w-auto'
+                    className={`w-24 ${user ? '-mt-[20px]' : '-mt-[28px]'} lg:-mt-0 ml-16 lg:ml-0 lg:w-auto`}
+                    priority
                 />
-            </section>
+              </Link>
+            </div>
             
             {/* Navigation Links */}
-            <section>
-                <ul className='text-white mt-2 text-sm lg:text-lg flex gap-8'>
-                    <Link href={'/'} className='hover:text-primary-200 transition-colors'>Home</Link>
-                    <Link href={'/how-its-works'} className='hover:text-primary-200 transition-colors'>{`How it's Work`}</Link>
-                    <Link href={'/feature'} className='hover:text-primary-200 transition-colors'>Feature</Link>
-                    <Link href={'/templates'} className='hover:text-primary-200 transition-colors'>Templates</Link>
-                    <Link href={'/pricing'} className='hover:text-primary-200 transition-colors'>Pricing</Link>
-                    <Link href={'/my-form'} className='hover:text-primary-200 transition-colors'>My Form</Link>
-                </ul>
-            </section>
+            <nav>
+                {/* <ul className='text-white mt-2 text-sm lg:text-lg flex gap-8'>
+                    {navLinks.map((link) => (
+                        <li key={link.href}>
+                            <Link 
+                                href={link.href} 
+                                className='hover:text-primary-200 transition-colors'
+                            >
+                                {link.label}
+                            </Link>
+                        </li>
+                    ))}
+                </ul> */}
+            </nav>
             
             {/* Icons Section */}
-            <section className='flex items-center gap-6'>
-                <button className='relative'>
-                    <IoIosNotificationsOutline className='text-[30px] lg:text-[40px] text-white hover:text-primary-200 transition-colors' />
-                    {/* <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center'>
-                        3
-                    </span> */}
-                </button>
-                
-                {/* Profile Dropdown */}
-              {  <div className='relative' ref={profileRef}>
+           {user ? (
+                <div className='flex items-center gap-6'>
+                    {/* Notification Button */}
                     <button 
-                        onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className='flex items-center gap-1 focus:outline-none'
+                        className='relative'
+                        aria-label='Notifications'
                     >
-                        <FaRegCircleUser className='text-[30px] lg:text-[40px] text-white hover:text-primary-200 transition-colors' />
+                        <IoIosNotificationsOutline className='text-[30px] lg:text-[40px] text-white cursor-pointer hover:text-primary-200 transition-colors' />
                     </button>
                     
-                    {/* Dropdown Menu */}
-                    { user && isProfileOpen && (
-                        <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 overflow-hidden border border-gray-100'>
-                            <div className='py-1'>
-                                <div className='px-4 py-3 border-b border-gray-100'>
-                                    <p className='text-sm font-medium text-gray-800'>{user?.username}</p>
-                                    <p className='text-xs text-gray-500 truncate'>{user?.email}</p>
+                    {/* Profile Dropdown */}
+                    <div className='relative' ref={profileRef}>
+                        <button 
+                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                            className='flex items-center gap-1 focus:outline-none'
+                            aria-label='User profile'
+                        >
+                            <FaRegCircleUser className='text-[30px] lg:text-[40px] text-white hover:text-primary-200 cursor-pointer transition-colors' />
+                        </button>
+                        
+                        {/* Dropdown Menu */}
+                        {isProfileOpen && (
+                            <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 overflow-hidden border border-gray-100'>
+                                <div className='py-1'>
+                                    {/* User Info */}
+                                    <div className='px-4 py-3 border-b border-gray-100'>
+                                        <p className='text-sm font-medium text-gray-800'>{user?.username}</p>
+                                        <p className='text-xs text-gray-500 truncate'>{user?.email}</p>
+                                    </div>
+                                    
+                                    {/* Profile Link */}
+                                    <Link 
+                                        href="/profile" 
+                                        className='flex cursor-pointer items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
+                                        onClick={() => setIsProfileOpen(false)}
+                                    >
+                                        <FiUser className='mr-3 text-gray-500' />
+                                        View Profile
+                                    </Link>
+                                    
+                                    {/* Logout Button */}
+                                    <button 
+                                        onClick={handleLogout}
+                                        className='w-full flex cursor-pointer items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
+                                    >
+                                        <FiLogOut className='mr-3 text-gray-500' />
+                                        Log Out
+                                    </button>
                                 </div>
-                                
-                                <Link 
-                                    href="/profile" 
-                                    className='flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
-                                >
-                                    <FiUser className='mr-3 text-gray-500' />
-                                    View Profile
-                                </Link>
-                                
-                                <button 
-                                
-                                onClick={handleLogout}
-                                className='w-full flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'>
-                                    <FiLogOut className='mr-3 text-gray-500' />
-                                    Log Out
-                                </button>
                             </div>
-                        </div>
-                    )}
-                </div>}
-            </section>
-        </div>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div className='flex items-center '>
+                    <Link 
+                        href="/sign-in" 
+                        className='px-5 py-2.5 rounded-md border-[#1A1466] text-white font-medium rounded-r-none border-r-0 hover:bg-opacity-10 transition-colors whitespace-nowrap border btn-primary  border-opacity-20'
+                    >
+                        Log in
+                    </Link>
+                    
+                    <Link 
+                        href="/sign-up" 
+                        className='px-5 py-2.5 border-[#1A1466] rounded-md rounded-l-none  font-medium bg-third text-[#1A1466] hover:bg-opacity-90 transition-colors whitespace-nowrap shadow-md'
+                    >
+                        Sign Up
+                    </Link>
+                </div>
+            )}
+        </header>
     );
 };
 

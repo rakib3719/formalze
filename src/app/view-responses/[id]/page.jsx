@@ -18,7 +18,7 @@ const page = () => {
 
     return (
         <div>
-        <Response data={data} isLoading={isLoading} error={error} title={title}/>
+        <Response data={data} isLoading={isLoading} error={error} title={title} id={id}/>
         </div>
     );
 };

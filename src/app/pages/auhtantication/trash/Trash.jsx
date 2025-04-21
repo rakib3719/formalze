@@ -7,106 +7,145 @@ import usePublicAxios from '@/hooks/usePublicAxios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
-import { FaChartBar, FaTrashAlt, FaArchive } from 'react-icons/fa';
-import { FaRegStar } from 'react-icons/fa6';
+import { FaChartBar, FaTrashAlt, FaRedo, FaStar } from 'react-icons/fa';
 import { LiaClone } from "react-icons/lia";
 import Swal from 'sweetalert2';
 import { IoCheckmarkDone } from "react-icons/io5";
-import useUpdateFormStatus from '@/hooks/form/useUpdateFormStatus';
-import { IoIosStar } from 'react-icons/io';
 
-const MyAllFormPage = () => {
-    const { data, isLoading, error, refetch } = useGetForm();
+const Trash = () => {
+    const { data, isLoading, error, refetch } = useGetForm("trash");
     const [copiedId, setCopiedId] = useState(null);
     const [checkedId, setCheckedId] = useState([]);
     const publicAxios = usePublicAxios();
     const router = useRouter();
-
-    // Filter out forms that are in trash or archived
-    const filteredForms = data?.filter(form => !form.is_trash && !form.is_archive) || [];
-
-    const copyFormLink = async (id, token) => {
-        const formLink = `${window.location.origin}/formView/${token}`;
-        await navigator.clipboard.writeText(formLink);
-        setCopiedId(id);
-        setTimeout(() => {
-            setCopiedId(null);
-        }, 2000);
-    };
-
-    const deleteForm = async (id) => {
-        try {
-            const resp = await publicAxios.delete(`/form/list/${id}/`);
-            if (resp.status === 204) {
-                refetch();
-                Swal.fire({
-                    title: "Deleted!",
-                    text: "Your form has been deleted.",
-                    icon: "success"
-                });
-            }
-        } catch (err) {
-            Swal.fire({
-                title: "Error!",
-                text: "Failed to delete form.",
-                icon: "error"
-            });
-        }
-    };
 
     const toggleOperation = async (id, toggle) => {
         const resp = await publicAxios.post(`/form/toggle-${toggle}/${id}`);
         if (resp.data.success) {
             refetch();
             Swal.fire({
-                title: "Moved!",
-                text: toggle === 'favorite' 
-                    ? "Your form favorite status has been updated." 
-                    : `Your form has been moved to ${toggle}.`,
+                title: "Success!",
+                text: toggle === 'trash' 
+                    ? "Form restored to active" 
+                    : `Form moved to ${toggle}`,
                 icon: "success"
             });
         }
     };
 
-    const handleToggle = async (id, toggle) => {
-        if (toggle === 'favorite') {
-            await toggleOperation(id, toggle);
+    const handleAction = async (id, action) => {
+        if (action === 'restore') {
+            await toggleOperation(id, 'trash');
             return;
         }
 
         Swal.fire({
             title: "Are you sure?",
-            text: `Are you sure you want to move this to ${toggle}?`,
+            text: action === 'delete' 
+                ? "Permanently delete this form?" 
+                : "Restore this form to active?",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: "Yes, Move it!"
+            confirmButtonColor: action === 'delete' ? "#d33" : "#3085d6",
+            cancelButtonColor: "#1A1466",
+            confirmButtonText: `Yes, ${action} it!`
         }).then((result) => {
             if (result.isConfirmed) {
-                toggleOperation(id, toggle);
+                if (action === 'delete') {
+                    deleteFormPermanently(id);
+                } else {
+                    toggleOperation(id, 'trash');
+                }
             }
         });
     };
 
+    const copyFormLink = async (id, token) => {
+        const formLink = `${window.location.origin}/formView/${token}`;
+        await navigator.clipboard.writeText(formLink);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const deleteFormPermanently = async (id) => {
+        try {
+            const resp = await publicAxios.delete(`/form/list/${id}/`);
+            if (resp.status === 204) {
+                refetch();
+                Swal.fire({
+                    title: "Deleted!",
+                    text: "Form permanently deleted",
+                    icon: "success"
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                title: "Error!",
+                text: "Failed to delete form",
+                icon: "error"
+            });
+        }
+    };
+
+    // const emptyTrash = async () => {
+    //     Swal.fire({
+    //         title: "Empty Trash?",
+    //         text: "This will permanently delete ALL forms in trash",
+    //         icon: "warning",
+    //         showCancelButton: true,
+    //         confirmButtonColor: "#d33",
+    //         cancelButtonColor: "#1A1466",
+    //         confirmButtonText: "Yes, empty trash!"
+    //     }).then(async (result) => {
+    //         if (result.isConfirmed) {
+    //             try {
+    //                 const resp = await publicAxios.post('/form/empty-trash/');
+    //                 if (resp.status === 200) {
+    //                     refetch();
+    //                     Swal.fire({
+    //                         title: "Emptied!",
+    //                         text: "Trash has been cleared",
+    //                         icon: "success"
+    //                     });
+    //                 }
+    //             } catch (err) {
+    //                 Swal.fire({
+    //                     title: "Error!",
+    //                     text: "Failed to empty trash",
+    //                     icon: "error"
+    //                 });
+    //             }
+    //         }
+    //     });
+    // };
+
     const checkboxHandle = (e) => {
         const formId = Number(e.target.name);
         const isChecked = e.target.checked;
-        setCheckedId(prev =>
-            isChecked ? [...prev, formId] : prev.filter(id => id !== formId)
-        );
+        setCheckedId(prev => isChecked ? [...prev, formId] : prev.filter(id => id !== formId));
     };
 
     if (isLoading) return <LoadingPage />;
     if (error) return <ErrorPage message='Something went wrong! Please refresh this page or login again!' />;
-    if (filteredForms.length < 1) return <NoDataAvailable message="No form available..." />;
+    if (data?.length < 1) return <NoDataAvailable message="Trash is empty..." />;
 
     return (
         <div className='lg:ml-[26%] xl:ml-[22%] ml-0 xl:m mt-24 px-1 h-[calc(100vh-2rem)]'>
             <div className='w-full overflow-x-auto'>
                 <div className='min-w-max'>
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl text-black font-semibold">Trash</h2>
+                        {/* <button
+                            onClick={emptyTrash}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                        >
+                            <FaTrashAlt />
+                            <span>Empty Trash</span>
+                        </button> */}
+                    </div>
+
                     <div className='space-y-4'>
-                        {filteredForms.map((form) => (
+                        {data && data.map((form) => (
                             <div key={form.id} className='flex items-center dark:bg-white cursor-pointer border-b-[#00000059] border-b border-[#00000059] px-6 py-3 hover:bg-gray-50 transition-colors '>
                                 {/* Left side - Form title and actions */}
                                 <div className='flex-1 mr-4 flex items-center lg:min-w-[250px] md:min-w-[250px] xl:min-w-[400px] max-w-[150px]'>
@@ -120,26 +159,15 @@ const MyAllFormPage = () => {
                                         />
 
                                         <div className='flex-shrink-0'>
-                                            {!form.is_favorite ? (
-                                                <FaRegStar 
-                                                    onClick={() => handleToggle(form.id, 'favorite')}
-                                                    className='text-[#000000] w-4 h-4 hover:text-amber-500' 
-                                                />
-                                            ) : (
-                                                <IoIosStar
-                                                    onClick={() => handleToggle(form.id, 'favorite')}
-                                                    className='text-amber-500 w-4 h-4' 
-                                                />
-                                            )}
+                                            <FaTrashAlt className='text-gray-500 w-4 h-4' />
                                         </div>
                                         
-                                        <Link 
-                                            href={`formView/${form.unique_token}`}  
-                                            className='text-sm md:text-lg cursor-pointer text-black  hover:text-primary transition-colors  flex-1  min-w-[150px]'
+                                        <span 
+                                            className='text-sm md:text-lg cursor-pointer text-black truncate flex-1 min-w-[150px]'
                                             title={form.title}
                                         >
                                             {form.title}
-                                        </Link>
+                                        </span>
 
                                         <div className='relative flex-shrink-0'>
                                             {copiedId !== form.id ? (
@@ -174,19 +202,11 @@ const MyAllFormPage = () => {
                                     {checkedId.includes(form.id) && (
                                         <>
                                             <button
-                                                onClick={() => handleToggle(form.id, 'archive')}
+                                                onClick={() => handleAction(form.id, 'restore')}
                                                 className='flex cursor-pointer items-center gap-2 px-3 py-2 bg-gray-100 text-sm lg:text-lg hover:bg-gray-200 text-gray-700 rounded transition-colors'
                                             >
-                                                <FaArchive className='text-sm' />
-                                                <span>Archive</span>
-                                            </button>
-
-                                            <button
-                                                onClick={() => handleToggle(form.id, 'trash')}
-                                                className='flex items-center gap-2 px-3 py-2 bg-gray-100 text-sm lg:text-lg cursor-pointer hover:bg-gray-200 text-gray-700 rounded transition-colors'
-                                            >
-                                                <FaTrashAlt className='text-sm' />
-                                                <span>Trash</span>
+                                                <FaRedo className='text-sm' />
+                                                <span>Restore</span>
                                             </button>
 
                                             <button
@@ -198,20 +218,20 @@ const MyAllFormPage = () => {
                                         </>
                                     )}
 
-                                    <Link
-                                        href={`/view-responses/${form.id}?title=${form.title}`}
+                                    <button
+                                        onClick={() => handleAction(form.id, 'restore')}
                                         className="flex text-sm lg:text-lg items-center gap-2 px-4 py-2 bg-primary text-white rounded hover:bg-primary-dark transition-colors"
                                     >
-                                        <FaChartBar />
-                                        <span>Responses</span>
-                                    </Link>
+                                        <FaRedo />
+                                        <span>Restore</span>
+                                    </button>
 
-                                    <Link 
-                                        href={`/update-form/${form?.unique_token}`} 
-                                        className='bg-primary text-sm lg:text-lg text-white rounded px-4 py-2 hover:bg-primary-dark transition-colors'
+                                    {/* <button
+                                        onClick={() => handleAction(form.id, 'delete')}
+                                        className='bg-red-500 text-white rounded px-4 py-2 hover:bg-red-600 transition-colors'
                                     >
-                                        Edit
-                                    </Link>
+                                        <FaTrashAlt />
+                                    </button> */}
                                 </div>
                             </div>
                         ))}
@@ -222,4 +242,4 @@ const MyAllFormPage = () => {
     );
 };
 
-export default MyAllFormPage;
+export default Trash;

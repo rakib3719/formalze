@@ -2,13 +2,85 @@ import axios from "axios";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
+// Helper function to format user data consistently
+const formatUserData = (userData, id, token) => ({
+  user: {
+    id: id,
+    email: userData.email || '',
+    username: userData.username || '',
+    phone: userData.phone || '',
+    address: userData.address || '',
+    healthCareName: userData.healthCareName || '',
+    token: token
+  },
+  token: token
+});
+
+// Fetch user info with token authentication
+const fetchUserWithToken = async (id, token) => {
+  try {
+    const response = await axios.get(
+      `https://formlyze.mrshakil.com/api/users/list/${id}/`,
+      {
+        headers: { 
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response?.data) {
+      throw new Error("Invalid user data response");
+    }
+
+    return formatUserData(response.data, id, token);
+  } catch (error) {
+    console.error("User fetch error:", error);
+    throw new Error(JSON.stringify({
+      error: "Failed to fetch user information",
+      status: error.response?.status || 500,
+      details: error.message
+    }));
+  }
+};
+
+// Handle username/password authentication
+const handleCredentialsAuth = async (username, password) => {
+  try {
+    const loginResponse = await axios.post(
+      'https://formlyze.mrshakil.com/api/users/login/',
+      { username, password },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!loginResponse?.data?.token || !loginResponse?.data?.user_id) {
+      throw new Error("Invalid login response");
+    }
+
+    const { token, user_id } = loginResponse.data;
+    return await fetchUserWithToken(user_id, token);
+
+  } catch (error) {
+    console.error("Login error:", error);
+    throw new Error(JSON.stringify({
+      error: "Authentication failed",
+      status: error.response?.status || 401,
+      details: error.message
+    }));
+  }
+};
+
 const handler = NextAuth({
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   
-  secret: process.env.NEXTAUTH_SECRET || 'ksdjnvhrkjnvkljfdkljkfdk',
+  secret: process.env.NEXTAUTH_SECRET || 'your-secure-fallback-secret',
 
   providers: [
     CredentialsProvider({
@@ -22,41 +94,31 @@ const handler = NextAuth({
 
       async authorize(credentials) {
         try {
-          // Direct authentication with existing token
-          if (credentials.user_id && credentials.token) {
-            return {
-              id: credentials.user_id,
-              token: credentials.token,
-              email: '',
-              username: '',
-              phone: '',
-              address: '',
-              healthCareName: ''
-            };
+          // Handle Google OAuth token authentication
+          if (credentials?.user_id && credentials?.token) {
+            const { user, token } = await fetchUserWithToken(credentials.user_id, credentials.token);
+            return { ...user, token };
           }
 
-          // Username/password authentication
-          if (!credentials.username || !credentials.password) {
+          // Handle regular username/password authentication
+          if (!credentials?.username || !credentials?.password) {
             throw new Error("Username and password are required");
           }
 
-          const { user, token } = await getUserWithToken(credentials.username, credentials.password);
-          
-          if (!user || !token) {
-            throw new Error("Invalid credentials");
-          }
-
-          return {
-            ...user,
-            token: token
-          };
+          const { user, token } = await handleCredentialsAuth(credentials.username, credentials.password);
+          return { ...user, token };
 
         } catch (error) {
-          console.error("Authorization error:", error.message);
-          throw new Error(JSON.stringify({
-            error: error.message || "Login failed",
-            status: error.response?.status || 401
-          }));
+          console.error("Authorization error:", error);
+          let errorData = { error: "Login failed", status: 401 };
+          
+          try {
+            errorData = JSON.parse(error.message);
+          } catch (e) {
+            errorData.details = error.message;
+          }
+          
+          throw new Error(JSON.stringify(errorData));
         }
       }
     })
@@ -64,7 +126,6 @@ const handler = NextAuth({
 
   callbacks: {
     async jwt({ token, user }) {
-      // Persist user data to token
       if (user) {
         token.user = {
           id: user.id,
@@ -80,7 +141,6 @@ const handler = NextAuth({
     },
 
     async session({ session, token }) {
-      // Send user properties to the client
       if (token.user) {
         session.user = token.user;
       }
@@ -97,50 +157,3 @@ const handler = NextAuth({
 });
 
 export { handler as GET, handler as POST };
-
-// Enhanced helper function
-const getUserWithToken = async (username, password) => {
-  try {
-    // Step 1: Login to get token
-    const loginRes = await axios.post(
-      'https://formlyze.mrshakil.com/api/users/login/', 
-      { username, password }
-    );
-
-    if (!loginRes?.data?.token || !loginRes?.data?.user_id) {
-      throw new Error("Invalid login response");
-    }
-
-    const { token, user_id } = loginRes.data;
-
-    // Step 2: Get user details with the token
-    const userInfoRes = await axios.get(
-      `https://formlyze.mrshakil.com/api/users/list/${user_id}/`,
-      {
-        headers: {
-          'Authorization': `Token ${token}`
-        }
-      }
-    );
-
-    if (!userInfoRes?.data) {
-      throw new Error("Failed to fetch user info");
-    }
-
-    return {
-      user: {
-        id: user_id,
-        email: userInfoRes.data.email || '',
-        username: userInfoRes.data.username || '',
-        phone: userInfoRes.data.phone || '',
-        address: userInfoRes.data.address || '',
-        healthCareName: userInfoRes.data.healthCareName || ''
-      },
-      token: token
-    };
-
-  } catch (error) {
-    console.error("Authentication error:", error);
-    throw error;
-  }
-};

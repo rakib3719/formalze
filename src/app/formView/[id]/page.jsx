@@ -1,6 +1,7 @@
 'use client'
 import ViewForm from '@/app/pages/view-form/ViewForm';
 import LoadingPage from '@/components/shared/Loader';
+import Navbar from '@/components/shared/Navbar';
 import useGetForm from '@/hooks/form/useGetViewForm';
 import { useParams } from 'next/navigation';
 import React from 'react';
@@ -17,6 +18,7 @@ if(isLoading){
 }
     return (
         <div className=''>
+      
       <ViewForm data={data} isLoading={isLoading} error={error} id={id} />
         </div>
     );
