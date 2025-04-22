@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import React, { useState, Suspense } from 'react';
 import { FaPlus, FaTrash, FaArchive, FaStar, FaQuestionCircle, FaShieldAlt } from 'react-icons/fa';
 import { 
@@ -18,9 +18,9 @@ import { IoCheckboxOutline, IoClose } from 'react-icons/io5';
 import { template } from '@/data/template/template';
 import { IoIosMenu } from 'react-icons/io';
 
-// Wrap the component that uses useSearchParams in a separate component
 const SidebarContent = () => {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [openMenu, setOpenMenu] = useState(null);
     const [showMenu, setShowMenu] = useState(false);
 
@@ -39,12 +39,36 @@ const SidebarContent = () => {
         return null;
     }
 
+    if(pathname.includes('/sign-in') || pathname.includes('/sign-up')) {
+        return null;}
+
     // Get unique categories from templates
     const categories = [...new Set(
         template
             .map(item => item.category)
             .filter(cat => cat != null && cat !== 'Classic-form') 
     )].sort();
+
+    const isActive = (path) => {
+        const [basePath, queryString] = path.split('?');
+        
+        // Check if base path matches
+        if (pathname !== basePath) return false;
+        
+        // If there's a query string, check those params
+        if (queryString) {
+            const queryParams = new URLSearchParams(queryString);
+            
+            // Check each query parameter
+            for (const [key, value] of queryParams.entries()) {
+                if (searchParams.get(key) !== value) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    };
 
     const menu = [
         { 
@@ -91,21 +115,17 @@ const SidebarContent = () => {
         },
     ];
 
-    const isActive = (path) => {
-        return pathname === path.split('?')[0];
-    };
-
     return (
         <>
             {!showMenu ? (
-                <div className='fixed duration-1000 top-1 left-0 z-50 lg:hidden w-full h-[60px] flex items-center justify-between px-4'>
+                <div className='fixed duration-1000 top-1 left-0 z-50 lg:hidden  h-[60px] flex items-center justify-between px-4'>
                     <IoIosMenu 
                         onClick={toggleMenuIcon}
                         className='text-5xl'
                     />
                 </div>
             ) : (  
-                <div className='fixed top-1 duration-1000 left-0 z-50 lg:hidden w-full h-[60px] flex items-center justify-between px-4'>
+                <div className='fixed top-1 duration-1000 z-50 left-0  lg:hidden  h-[60px] flex items-center justify-between px-4'>
                     <IoClose
                         onClick={toggleMenuIcon}
                         className='text-5xl'
@@ -114,8 +134,8 @@ const SidebarContent = () => {
             )}
             
             <div className={`
-                inset-y-0 fixed ${user ? 'mt-[66px]' : 'mt-[81.5px]'} lg:mt-[84px] left-0 z-40
-                w-[240px] lg:w-[280px]
+                inset-y-0 fixed ${user ? 'mt-[66px] xl:[66.5px]' : 'mt-[81.5px] '} lg:mt-[84px] left-0 z-40
+                w-[240px] lg:w-[240px]
                 bg-third
                 flex flex-col
                 transform transition-all duration-300 ease-in-out
@@ -133,14 +153,17 @@ const SidebarContent = () => {
 
                 {/* Scrollable content section */}
                 <div className='flex-1 overflow-y-auto px-7'>
-                    <div className='pl-6 mt-4 text-gray-700 space-y-1'>
+                    <div className='mr-2 mt-4 text-gray-700 space-y-1'>
                         {menu.map((menuItem, idx) => (
                             menuItem.submenu ? 
-                                <div key={idx}>
+                                <div key={idx} className=''>
                                     <li
                                         onClick={() => toggleMenu(menuItem.id)}
-                                        className={`items-center flex font-semibold px-2 py-2 rounded transition-colors cursor-pointer ${
-                                            isActive(menuItem.link) ? 'menu-bg' : 'hover-menu-bg'
+                                        className={`items-center flex font-semibold w-[185px]   px-2 py-2 rounded transition-colors cursor-pointer ${
+                                            isActive(menuItem.link) || 
+                                            menuItem.submenu.some(sub => isActive(sub.link)) 
+                                                ? 'menu-bg' 
+                                                : 'hover-menu-bg'
                                         }`}
                                     >
                                         <span className="mr-3">{menuItem.icon}</span>
@@ -155,7 +178,7 @@ const SidebarContent = () => {
 
                                     {openMenu === menuItem.id && menuItem.submenu.map((Item, idx) => (
                                         <Link href={Item.link} key={idx}>
-                                            <div className={`flex items-center gap-2 pl-12 py-2 transition-colors ${
+                                            <div className={`flex items-center gap-2 pl-[35px] py-2 transition-colors ${
                                                 isActive(Item.link) ? 'menu-bg' : 'hover:bg-opacity-80 hover-menu-bg'
                                             }`}>
                                                 <span className="text-gray-900">
@@ -170,7 +193,7 @@ const SidebarContent = () => {
                             <Link 
                                 href={menuItem.link} 
                                 key={idx}
-                                className={`flex items-center font-semibold px-2 py-2 rounded transition-colors ${
+                                className={`flex items-center font-semibold px-2 py-2 w-[185px] rounded transition-colors ${
                                     isActive(menuItem.link) ? 'menu-bg' : 'hover-menu-bg'
                                 }`}
                             >
@@ -185,7 +208,6 @@ const SidebarContent = () => {
     );
 };
 
-// Main Sidebar component with Suspense
 const Sidebar = () => {
     return (
         <Suspense fallback={<div>Loading...</div>}>

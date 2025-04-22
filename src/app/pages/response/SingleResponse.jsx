@@ -277,7 +277,7 @@ console.log(data, 'ha data');
 
   // }
   return (
-    <div id="pdf" className="xl:ml-[20%]  lg:ml-[25%] text-black mt-28 rounded-2xl overflow-hidden border mb-8 bg-white">
+    <div id="pdf" className=" text-black mt-28 rounded-2xl overflow-hidden border mb-8 bg-white">
       {/* Response Header */}
       <div className="bg-gradient-to-r from-[#1A1466] to-[#8886CD] px-3 lg:px-6 py-5">
         <div className="md:flex justify-between items-center">
@@ -373,7 +373,7 @@ console.log(data, 'ha data');
                       </div>
                     </div>
                     <a 
-                      href={field.response.url} 
+                      href={`https://formlyze.mrshakil.com/media/images/${field.response}`} 
                       download
                       className="text-sm bg-white px-3 py-1.5 rounded-lg border border-[#CCCAEC] text-[#1A1466] hover:bg-[#E9E9FD] flex items-center"
                     >
@@ -475,13 +475,13 @@ console.log(data, 'ha data');
                   <div className="bg-[#F4F4FF] p-5 rounded-lg border border-[#CCCAEC]">
                     <div className="border border-[#CCCAEC] rounded-lg p-3 bg-white">
                       <img 
-                        src={field.response} 
+                        src={`https://formlyze.mrshakil.com/media/images/${field.response}`} 
                         alt="Signature" 
                         className="max-h-32 mx-auto"
                       />
                     </div>
                     <button className="mt-3 text-sm bg-white px-3 py-1.5 rounded-lg border border-[#CCCAEC] text-[#1A1466] hover:bg-[#E9E9FD] flex items-center">
-                      <FiDownload className="mr-1.5" /> Download Signature
+                      <FiDownload className="mr-1.5 cursor-pointer" /> Download Signature
                     </button>
                   </div>
                 ) : (

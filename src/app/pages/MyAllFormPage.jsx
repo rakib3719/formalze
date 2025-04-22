@@ -102,14 +102,14 @@ const MyAllFormPage = () => {
     if (filteredForms.length < 1) return <NoDataAvailable message="No form available..." />;
 
     return (
-        <div className='lg:ml-[26%] xl:ml-[22%] ml-0 xl:m mt-24 px-1 h-[calc(100vh-2rem)]'>
+        <div className={` ${checkedId ? 'lg:ml-[8%] xl:ml-0' : 'lg:-ml-[8%] xl:-ml-0'} xl:m mt-24 px-1 min-h-[calc(100vh-2rem)]`}>
             <div className='w-full overflow-x-auto'>
                 <div className='min-w-max'>
                     <div className='space-y-4'>
                         {filteredForms.map((form) => (
                             <div key={form.id} className='flex items-center dark:bg-white cursor-pointer border-b-[#00000059] border-b border-[#00000059] px-6 py-3 hover:bg-gray-50 transition-colors '>
                                 {/* Left side - Form title and actions */}
-                                <div className='flex-1 mr-4 flex items-center lg:min-w-[250px] md:min-w-[250px] xl:min-w-[400px] max-w-[150px]'>
+                                <div className=' mr-4 flex items-center md:min-w-[250px] xl:min-w-[400px] max-w-[150px]'>
                                     <div className='flex items-center space-x-3 w-full'>
                                         <input
                                             type="checkbox"
@@ -191,8 +191,12 @@ const MyAllFormPage = () => {
 
                                             <button
                                                 onClick={() => deleteForm(form.id)}
-                                                className='bg-[#D4D4D4] cursor-pointer text-primary mr-6 ml-auto px-4 text-sm lg:text-lg py-2 rounded'
+                                                className='bg-red-500 flex items-center gap-2 text-white cursor-pointer  mr-6 ml-auto px-4 text-sm lg:text-lg py-2 rounded'
                                             >
+                                                <FaTrashAlt className='text-sm' />
+
+
+
                                                 <span>Delete</span>
                                             </button>
                                         </>

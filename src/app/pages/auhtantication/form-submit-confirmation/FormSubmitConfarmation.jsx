@@ -7,7 +7,7 @@ import Link from 'next/link';
 const FormSubmitConfirmation = ({ onNewSubmission, _id }) => {
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
-            <div className="form-bg  ml-[20%]  rounded-lg  p-8 max-w-md w-full text-center">
+            <div className="form-bg   rounded-lg  p-8 max-w-md w-full text-center">
                 <div className="flex justify-center mb-4">
                     <FaCheckCircle className="text-green-500 text-5xl" />
                 </div>

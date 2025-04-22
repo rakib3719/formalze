@@ -82,7 +82,7 @@ const ClassicFormContent = () => {
     ];
 
     return (
-        <div className='lg:px-8 px-4 lg:pr-8 mt-28  lg:ml-[26%] 2xl:ml-[20%] xl:ml-[23%]'>
+        <div className='lg:px-8 px-4 lg:pr-8 mt-28  '>
             {/* Search and Filter Container */}
             <div className='flex flex-col md:flex-row gap-4 mb-8 p-4 bg-third rounded-lg shadow-sm'>
                 {/* Search Input */}

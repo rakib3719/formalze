@@ -130,7 +130,7 @@ const Trash = () => {
     if (data?.length < 1) return <NoDataAvailable message="Trash is empty..." />;
 
     return (
-        <div className='lg:ml-[26%] xl:ml-[22%] ml-0 xl:m mt-24 px-1 h-[calc(100vh-2rem)]'>
+        <div className={` ${checkedId ? 'lg:ml-[8%] xl:ml-0' : 'lg:-ml-[8%] xl:-ml-0'} xl:m mt-24 px-1 min-h-[calc(100vh-2rem)]`}>
             <div className='w-full overflow-x-auto'>
                 <div className='min-w-max'>
                     <div className="flex justify-between items-center mb-4">
@@ -210,11 +210,15 @@ const Trash = () => {
                                             </button>
 
                                             <button
-                                                onClick={() => deleteForm(form.id)}
-                                                className='bg-[#D4D4D4] cursor-pointer text-primary mr-6 ml-auto px-4 text-sm lg:text-lg py-2 rounded'
-                                            >
-                                                <span>Delete</span>
-                                            </button>
+                                                                                           onClick={() => deleteForm(form.id)}
+                                                                                           className='bg-red-500 flex items-center gap-2 text-white cursor-pointer  mr-6 ml-auto px-4 text-sm lg:text-lg py-2 rounded'
+                                                                                       >
+                                                                                           <FaTrashAlt className='text-sm' />
+                                           
+                                           
+                                           
+                                                                                           <span>Delete</span>
+                                                                                       </button>
                                         </>
                                     )}
 

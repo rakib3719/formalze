@@ -2,7 +2,7 @@
 import ErrorPage from '@/components/shared/ErrorPage';
 import LoadingPage from '@/components/shared/Loader';
 import usePublicAxios from '@/hooks/usePublicAxios';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   FaChevronDown,
   FaCalendarAlt,
@@ -18,8 +18,16 @@ import FormSubmitConfirmation from '../auhtantication/form-submit-confirmation/F
 import { toast, ToastContainer } from 'react-toastify';
 import { useSession } from 'next-auth/react';
 import Navbar from '@/components/shared/Navbar';
+import logo from '@/assets/images/logo/formlazy logo.png'; // Default logo
+import dummyLogo from '@/assets/images/logo/formlazy logo.png';  // Dummy logo for when data.logo is not available
+import Link from 'next/link';
+import bg from '@/assets/images/auth/bg-1.png';
+import bg2 from '@/assets/images/auth/bg-2.png';
+import Image from 'next/image';
 
 const ViewForm = ({ data, isLoading, error, id }) => {
+
+
   const session = useSession();
   const user = session?.data?.user;
   const [_id, setId] = useState(null);
@@ -78,16 +86,28 @@ const ViewForm = ({ data, isLoading, error, id }) => {
     }
   };
 
-  console.log(data, 'this is view from data');
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    const responseData = data.fields.map((field) => {
-      let responseValue = formData[field.id] || '';
 
-      if (field.type === 'phone' && responseValue && responseValue.code && responseValue.number) {
-        responseValue = `${responseValue.code}${responseValue.number}`;
+    const submissionFormData = new FormData();
+    submissionFormData.append('responder_email', email);
+    submissionFormData.append('form', data.id);
+    submissionFormData.append('title', data.form_name || data.title || '');
+
+    const responseData = data.fields.map((field) => {
+      let responseValue = '';
+
+      if (field.type === 'file' || field.type === 'signature') {
+        const file = formData[field.id];
+        if (file) {
+          submissionFormData.append(`file_${field.id}`, file);
+          responseValue = file.name;
+        }
+      } else if (field.type === 'phone' && formData[field.id] && formData[field.id].code && formData[field.id].number) {
+        responseValue = `${formData[field.id].code}${formData[field.id].number}`;
+      } else {
+        responseValue = formData[field.id] || '';
       }
 
       return {
@@ -98,25 +118,24 @@ const ViewForm = ({ data, isLoading, error, id }) => {
       };
     });
 
-    const formResponse = {
-      responder_email: email,
-      response_data: responseData,
-      form: data.id,
-      title: data.form_name || data.title || '',
-    };
+    submissionFormData.append('response_data', JSON.stringify(responseData));
 
     try {
-      const resp = await publicAxios.post('/form/response/', formResponse);
+      const resp = await publicAxios.post('/form/response/', submissionFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       if (resp.status === 201) {
         toast.success('Response sent successfully');
         setIsSubmitted(true);
-        setLoading(false);
         setId(resp.data.id);
-      } else {
-        setLoading(false);
       }
     } catch (err) {
       toast.error('Failed to submit response. Please try again.');
+      console.error('Submission error:', err);
+    } finally {
       setLoading(false);
     }
   };
@@ -240,24 +259,39 @@ const ViewForm = ({ data, isLoading, error, id }) => {
           <div className="mt-4 border-2 border-dashed border-[#CCCAEC] rounded-lg p-6 text-center bg-[#F4F4FF]">
             <div className="flex flex-col items-center justify-center">
               <FiImage className="text-gray-400 text-3xl mb-2" />
-              <p className="text-gray-500">Drag and drop files here or click to upload</p>
-              <input
-                type="file"
-                className="hidden"
-                id={`file-${field.id}`}
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    handleInputChange(field.id, file.name);
-                  }
-                }}
-              />
-              <label
-                htmlFor={`file-${field.id}`}
-                className="mt-4 px-4 py-2 bg-white text-[#1A1466] border border-[#CCCAEC] rounded-md hover:bg-[#E9E9FD] cursor-pointer"
-              >
-                Select files
-              </label>
+              {formData[field.id] ? (
+                <>
+                  <p className="text-gray-800 font-medium">{formData[field.id].name}</p>
+                  <button
+                    type="button"
+                    className="mt-2 text-sm text-red-500 hover:text-red-700"
+                    onClick={() => handleInputChange(field.id, null)}
+                  >
+                    Remove file
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500">Drag and drop files here or click to upload</p>
+                  <input
+                    type="file"
+                    className="hidden"
+                    id={`file-${field.id}`}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        handleInputChange(field.id, file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`file-${field.id}`}
+                    className="mt-4 px-4 py-2 bg-white text-[#1A1466] border border-[#CCCAEC] rounded-md hover:bg-[#E9E9FD] cursor-pointer"
+                  >
+                    Select files
+                  </label>
+                </>
+              )}
             </div>
           </div>
         );
@@ -357,25 +391,40 @@ const ViewForm = ({ data, isLoading, error, id }) => {
           <div className="mt-4 border-2 border-dashed border-[#CCCAEC] rounded-lg p-6 text-center bg-[#F4F4FF]">
             <div className="flex flex-col items-center justify-center">
               <FaSignature className="text-gray-400 text-4xl mb-3" />
-              <p className="text-gray-500">Upload your signature</p>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                id={`signature-${field.id}`}
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    handleInputChange(field.id, file.name);
-                  }
-                }}
-              />
-              <label
-                htmlFor={`signature-${field.id}`}
-                className="mt-3 text-sm bg-white px-3 py-1.5 rounded-lg border border-[#CCCAEC] text-[#1A1466] hover:bg-[#E9E9FD] cursor-pointer"
-              >
-                Upload Signature
-              </label>
+              {formData[field.id] ? (
+                <>
+                  <p className="text-gray-800 font-medium">{formData[field.id].name}</p>
+                  <button
+                    type="button"
+                    className="mt-2 text-sm text-red-500 hover:text-red-700"
+                    onClick={() => handleInputChange(field.id, null)}
+                  >
+                    Remove signature
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-500">Upload your signature</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id={`signature-${field.id}`}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        handleInputChange(field.id, file);
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`signature-${field.id}`}
+                    className="mt-3 text-sm bg-white px-3 py-1.5 rounded-lg border border-[#CCCAEC] text-[#1A1466] hover:bg-[#E9E9FD] cursor-pointer"
+                  >
+                    Upload Signature
+                  </label>
+                </>
+              )}
             </div>
           </div>
         );
@@ -398,18 +447,45 @@ const ViewForm = ({ data, isLoading, error, id }) => {
     }
   };
 
+
+  // Determine logo and website URL to use
+  const displayLogo = data.logo ? data.logo : dummyLogo;
+  const displayWebsiteUrl = data.url ? data.url : 'https://example.com';
+
   return (
     <div className="min-h-screen px-4 md:px-8">
- 
-      <div className="xl:ml-[20%] lg:ml-[25%] mt-28 rounded-2xl overflow-hidden border-[#1A1466] border mb-8 bg-white  mx-auto">
+      <div className="mt-28 rounded-2xl overflow-hidden border-[#1A1466] border mb-8 bg-white mx-auto">
         <ToastContainer />
         {/* Form Header */}
         <div className="bg-gradient-to-r from-[#0e0e11] to-[#8886CD] px-4 md:px-6 py-5">
+          {/* Logo and Website URL Section */}
+          <div className="flex justify-between items-center mb-4">
+         { data?.logo &&  <Link href="/">
+              <Image
+                src={`https://formlyze.mrshakil.com${displayLogo}`}
+                alt="Form Logo"
+                width={100}
+                height={50}
+                className="object-contain rounded-sm shadow-sm p-2 bg-white"
+              />
+            </Link>}
+           {
+           data.url && <a
+              href={displayWebsiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white text-sm font-medium hover:underline flex items-center bg-[#1A1466] px-3 py-1.5 rounded-md shadow-sm hover:bg-opacity-90 transition-colors"
+            >
+              <FaLink className="mr-2" />
+              {displayWebsiteUrl}
+            </a>}
+          </div>
+          {/* Form Title and Description */}
           <h1 className="text-2xl font-semibold text-white">
             {data.title || data.form_name || 'Untitled Form'}
           </h1>
           <p className="text-sm text-[#CCCAEC] mt-1">
-            {data.description || data.form_description|| 'Please fill out the form below.'}
+            {data.description || data.form_description || 'Please fill out the form below.'}
           </p>
           {data.fields?.some((field) => field.required) && (
             <p className="text-xs text-[#CCCAEC] mt-2">
@@ -419,7 +495,7 @@ const ViewForm = ({ data, isLoading, error, id }) => {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className=" px-3 md:px-6 py-5">
+        <form onSubmit={handleSubmit} className="px-3 md:px-6 py-5">
           {/* Email Field */}
           <div className="mb-6 bg-[#F4F4FF] p-5 rounded-lg border border-[#CCCAEC]">
             <h2 className="text-lg font-semibold text-[#1A1466]">
@@ -470,7 +546,7 @@ const ViewForm = ({ data, isLoading, error, id }) => {
             >
               {loading ? 'Submitting...' : 'Submit'}
             </button>
-            <p className="text-sm text-gray-500">All responses will be kept confidential</p>
+            <p className="text-sm ml-8 sm:ml-0 text-gray-500">All responses will be kept confidential</p>
           </div>
         </form>
       </div>

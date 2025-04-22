@@ -15,7 +15,7 @@ const DashBoardLayout = () => {
 <Sidebar/>
 <div className="flex-1 relative">
 <SubNavbar/>
-<div className="ml-[22%] mt-24 overflow-y-auto h-[calc(100vh-12rem)]">
+<div className=" mt-24 overflow-y-auto h-[calc(100vh-12rem)]">
 {children}
 </div>
 </div>

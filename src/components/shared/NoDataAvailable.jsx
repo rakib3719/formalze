@@ -2,7 +2,7 @@ import React from 'react';
 
 const NoDataAvailable = ({ message = 'No data available' }) => {
   return (
-    <div className="flex lg:ml-[24%] mt-52 flex-col items-center justify-center p-8 text-center">
+    <div className="flex   mt-52 flex-col items-center justify-center p-8 text-center">
       {/* Illustration */}
       <div className="w-24 h-24 mb-4 text-gray-400">
         <svg 

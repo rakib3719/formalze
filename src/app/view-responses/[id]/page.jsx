@@ -17,7 +17,7 @@ const page = () => {
 
 
     return (
-        <div>
+        <div className='overflow-hidden max-w-screen'>
         <Response data={data} isLoading={isLoading} error={error} title={title} id={id}/>
         </div>
     );

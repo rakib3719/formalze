@@ -5,6 +5,7 @@ import Navbar from "@/components/shared/Navbar";
 import Sidebar from "@/components/shared/Sidebar";
 import AuthProvider from "@/providers/AuthProvider";
 import { ToastContainer } from "react-toastify";
+import Mock from "@/components/shared/Mock";
 
 
 
@@ -30,6 +31,8 @@ export default function RootLayout({ children }) {
 
 <div className="flex justify-between bg-white">
 <Sidebar/>
+
+<Mock/>
 <div className="flex-1 relative">
 <SubNavbar/>
 <div className="overflow-auto scrollbar-none bg-white">

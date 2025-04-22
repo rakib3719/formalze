@@ -2,7 +2,7 @@ import React from 'react';
 
 const ErrorPage = ({ message = "Something went wrong!" }) => {
   return (
-    <div className="flex flex-col lg:ml-[20%] items-center justify-center min-h-screen bg-gray-50 p-4 text-center">
+    <div className="flex flex-col  items-center justify-center min-h-screen bg-gray-50 p-4 text-center">
       {/* Error Icon */}
       <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
         <svg 
@@ -28,7 +28,7 @@ const ErrorPage = ({ message = "Something went wrong!" }) => {
       {/* Action Button */}
       <button
         onClick={() => window.location.reload()}
-        className="px-4 py-2 bg-[#1A1466] text-white rounded hover:bg-opacity-90 transition"
+        className="px-4 py-2 bg-[#1A1466] text-white cursor-pointer rounded hover:bg-opacity-90 transition"
       >
         Try Again
       </button>

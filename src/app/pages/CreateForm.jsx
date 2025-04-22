@@ -1,7 +1,7 @@
 'use client'
 import { Suspense } from 'react'
 import React, { useState, useRef, useEffect } from 'react'
-import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage, FiUpload } from 'react-icons/fi'
 import { 
   FaRegCircle, 
   FaRegCheckSquare, 
@@ -25,7 +25,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { template } from '@/data/template/template'
 
-// The main form content component that uses useSearchParams
 function FormEditorContent() {
   const session = useSession()
   const publicAxios = usePublicAxios()
@@ -44,6 +43,8 @@ function FormEditorContent() {
     title: '',
     created_by: user_id,
     description: '',
+    logo: null,
+    website_url: '',
     fields: []
   })
 
@@ -54,6 +55,8 @@ function FormEditorContent() {
         title: dataForm.title,
         created_by: user_id,
         description: dataForm.description,
+        logo: dataForm.logo || null,
+        website_url: dataForm.website_url || '',
         fields: dataForm.fields.map(field => ({
           id: field.id || Date.now(),
           heading: field.heading,
@@ -71,6 +74,8 @@ function FormEditorContent() {
   const [newOptionText, setNewOptionText] = useState('')
   const [isSelectOpen, setIsSelectOpen] = useState(false)
   const [currentSelectIndex, setCurrentSelectIndex] = useState(null)
+  const [uploadedFileName, setUploadedFileName] = useState('')
+  const fileInputRef = useRef(null)
   const fieldRefs = useRef([])
 
   const countryCodes = [
@@ -214,45 +219,72 @@ function FormEditorContent() {
     updateField(fieldIndex, updatedField)
   }
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setUploadedFileName(file.name)
+      setForm(prev => ({
+        ...prev,
+        logo: file
+      }))
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click()
+  }
+
   const publishForm = async() => {
-    const newForm = {...form, created_by: user_id}
+    const formData = new FormData()
+    formData.append('title', form.title)
+    formData.append('description', form.description)
+    formData.append('created_by', user_id)
+    formData.append('website_url', form.website_url || '')
+    formData.append('fields', JSON.stringify(form.fields))
+    
+    if (form.logo) {
+      formData.append('logo', form.logo)
+    }
+
     setLoading(true)
     
-    if (!newForm.created_by) {
+    if (!user_id) {
       toast.error('You must be logged in to create a form')
       setLoading(false)
       return
     }
 
-    if(!newForm.description){
-      toast.error('Description is required')
-      setLoading(false)
-      return
-    }
+    // if(!form.description){
+    //   toast.error('Description is required')
+    //   setLoading(false)
+    //   return
+    // }
     
-    if(!newForm.title){
+    if(!form.title){
       toast.error('Title is required')
       setLoading(false)
       return
     }
 
     try {
-      if(user_id){
-        const resp = await publicAxios.post('/form/list/', newForm)
-        if(resp.data.success === true) {
-          setLoading(false)
-          toast.success('Form created successfully')
-          router.push('/my-all-form')
-          refetch()
+      const resp = await publicAxios.post('/form/list/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
         }
-        else{
-          setLoading(false)
-          toast.error('Please login first')
-        }
+      })
+
+      if(resp.data.success === true) {
+        setLoading(false)
+        toast.success('Form created successfully')
+        router.push('/my-all-form')
+        refetch()
+      } else {
+        setLoading(false)
+        toast.error(resp.data.message || 'Failed to create form')
       }
     } catch (error) {
       setLoading(false)
-      toast.error(error.message || 'Something went wrong - please try again later')
+      toast.error(error.response?.data?.message || error.message || 'Something went wrong - please try again later')
     }
   }
 
@@ -383,9 +415,18 @@ function FormEditorContent() {
       case 'file':
         return (
           <div className="border-2 border-dashed border-[#CCCAEC] rounded p-4 text-center">
-            <button className="bg-[#F4F4FF] hover:bg-[#E9E9FD] px-4 py-2 rounded text-sm text-[#1A1466]">
+            <button 
+              className="bg-[#F4F4FF] hover:bg-[#E9E9FD] px-4 py-2 rounded text-sm text-[#1A1466] flex items-center mx-auto"
+              disabled
+            >
+              <FiUpload className="mr-2" />
               Upload file
             </button>
+            {uploadedFileName && (
+              <p className="text-sm text-[#1A1466] mt-2">
+                {uploadedFileName}
+              </p>
+            )}
           </div>
         )
       case 'address':
@@ -475,7 +516,7 @@ function FormEditorContent() {
   }
 
   return (
-    <div className=' px-4 lg:px-8 xl:ml-[20%] lg:ml-[25%] '>
+    <div className=' px-4 lg:px-8  '>
       <div className=" text-black mt-28 rounded-2xl border border-[#1A1466] overflow-hidden mb-8 bg-white">
         {/* Form Header */}
         <div className="bg-gradient-to-r from-[#1A1466] to-[#8886CD] px-4 lg:px-6 py-5">
@@ -520,6 +561,52 @@ function FormEditorContent() {
               value={form.description}
               onChange={(e) => setForm({...form, description: e.target.value})}
             />
+            
+            {/* Logo and Website URL Fields */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center">
+                <button
+                  onClick={triggerFileInput}
+                  className="bg-[#E9E9FD] text-[#1A1466] px-4 py-2 rounded-md text-sm hover:bg-[#D9D9FD] flex items-center"
+                >
+                  <FiUpload className="mr-2" />
+                  {form.logo ? 'Change Logo' : 'Upload Logo'}
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*"
+                />
+                {form.logo && (
+                  <div className="ml-4 flex items-center">
+                    <span className="text-sm text-[#1A1466] mr-2">
+                      {uploadedFileName || 'Logo selected'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setForm(prev => ({...prev, logo: null}))
+                        setUploadedFileName('')
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <input
+                  type="url"
+                  className="w-full text-sm border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent"
+                  placeholder="Website URL (optional)"
+                  value={form.website_url}
+                  onChange={(e) => setForm({...form, website_url: e.target.value})}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Form Fields */}
@@ -612,7 +699,7 @@ function FormEditorContent() {
                             onClick={() => {
                               if (newOptionText.trim()) {
                                 addOption(index);
-                              }
+                            }
                             }}
                             className="px-3 py-1 bg-[#1A1466] text-white rounded cursor-pointer text-sm hover:bg-[#0e0b3d]"
                           >
@@ -767,7 +854,6 @@ function FormEditorContent() {
   )
 }
 
-// Main page component with Suspense boundary
 export default function CreateFormPage() {
   return (
     <>

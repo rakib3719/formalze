@@ -18,115 +18,47 @@ const Response = ({ data = [], isLoading, error, title,id }) => {
     const [isSortOpen, setIsSortOpen] = useState(false);
     const [viewMode, setViewMode] = useState('card');
     const [showExportButton, setShowExportButton] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Check if mobile device
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Show export button only when data is available
     useEffect(() => {
         setShowExportButton(data && data.length > 0);
     }, [data]);
 
+    // Auto search on mobile when typing
+    useEffect(() => {
+        if (isMobile && searchTerm) {
+            setShowSearchResults(true);
+        } else if (isMobile && !searchTerm) {
+            setShowSearchResults(false);
+        }
+    }, [searchTerm, isMobile]);
 
-    // Excel export function
+    const publicAxios = usePublicAxios();
 
-
-    // const exportToExcel = async () => {
-    //     if (!data || data.length === 0) return;
-    
-    //     const formatResponse = (response) => {
-    //         if (response === null || response === undefined) return '';
-    //         if (Array.isArray(response)) {
-    //             return response.map(item => formatResponse(item)).join(', ');
-    //         }
-    //         if (typeof response === 'object' && !(response instanceof Date)) {
-    //             return Object.entries(response)
-    //                 .map(([key, value]) => `${key}: ${formatResponse(value)}`)
-    //                 .join('\n');
-    //         }
-    //         return String(response);
-    //     };
-    
-    //     const formTitle = data[0].form_title;
-    //     const formDescription = data[0].form_description;
-    //     const questionTitles = data[0].response_data.map(item => item.question_title);
-    
-    //     // Create workbook and worksheet
-    //     const workbook = new ExcelJS.Workbook();
-    //     const worksheet = workbook.addWorksheet("Responses");
-    
-    //     // Title and Description (centered with styling)
-    //     const titleRow = worksheet.addRow([formTitle]);
-    //     titleRow.font = { 
-    //         size: 14, 
-    //         bold: true, 
-    //         color: { argb: '1A1466' } 
-    //     };
-    //     titleRow.alignment = { horizontal: 'center' };
-    //     worksheet.mergeCells('A1:' + String.fromCharCode(65 + questionTitles.length) + '1');
+    const exportToExcel = async () => {
+        // Create a hidden iframe
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = `https://formlyze.mrshakil.com/api/form/response/${id}/export/`;
+        document.body.appendChild(iframe);
         
-    //     if (formDescription) {
-    //         const descRow = worksheet.addRow([formDescription]);
-    //         descRow.alignment = { horizontal: 'center' };
-    //         worksheet.mergeCells('A2:' + String.fromCharCode(65 + questionTitles.length) + '2');
-    //     }
-    //     worksheet.addRow([]); // empty row
+        // Remove the iframe after a short delay
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
+    };
     
-    //     // Header row
-    //     const headerRow = ['No.', 'Responder Email', ...questionTitles];
-    //     const header = worksheet.addRow(headerRow);
-    
-    //     // Style the header row (exactly as you wanted)
-    //     header.eachCell((cell) => {
-    //         cell.fill = {
-    //             type: 'pattern',
-    //             pattern: 'solid',
-    //             fgColor: { argb: '1A1466' }, // your custom background
-    //         };
-    //         cell.font = {
-    //             bold: true,
-    //             color: { argb: 'FFFFFFFF' }, // white text
-    //         };
-    //     });
-    
-    //     // Add response data (unchanged)
-    //     data.forEach((response, index) => {
-    //         worksheet.addRow([
-    //             index + 1,
-    //             response.responder_email,
-    //             ...response.response_data.map(item => formatResponse(item.response))
-    //         ]);
-    //     });
-    
-    //     // Set column widths (unchanged)
-    //     worksheet.columns = [
-    //         { width: 5 },
-    //         { width: 25 },
-    //         ...questionTitles.map(() => ({ width: 30 }))
-    //     ];
-    
-    //     // Download the file (unchanged)
-    //     const buffer = await workbook.xlsx.writeBuffer();
-    //     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    
-    //     const link = document.createElement("a");
-    //     link.href = URL.createObjectURL(blob);
-    //     link.download = `${formTitle.replace(/[^a-z0-9]/gi, '_')}_Responses.xlsx`;
-    //     link.click();
-    // };
-const publicAxios = usePublicAxios();
-
-const exportToExcel = async () => {
-    // Create a hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = `https://formlyze.mrshakil.com/api/form/response/${id}/export/`;
-    document.body.appendChild(iframe);
-    
-    // Remove the iframe after a short delay
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
-  };
-    
-
     // Format date for display
     const formatDate = (dateString) => {
         const options = { 
@@ -180,10 +112,10 @@ const exportToExcel = async () => {
         },
         headCells: {
             style: {
-                paddingLeft: '16px',
-                paddingRight: '16px',
+                paddingLeft: '6px',
+                paddingRight: '6px',
                 '&:first-of-type': {
-                    paddingLeft: '24px',
+                    paddingLeft: '12px',
                 },
             },
         },
@@ -228,12 +160,18 @@ const exportToExcel = async () => {
             name: 'Email',
             selector: row => row.email,
             sortable: true,
+            width: '250px',
             cell: row => (
                 <div className="flex items-center gap-2">
                     <FiMail className="text-primary" size={14} />
-                    <span className="truncate max-w-[200px]">{row.email}</span>
+                    <span className="truncate">{row.email}</span>
                 </div>
             ),
+            style: {
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+            },
         },
         {
             name: 'Submitted At',
@@ -280,7 +218,7 @@ const exportToExcel = async () => {
     if (!data || data.length === 0) return <NoDataAvailable message='No responses yet!' />;
 
     return (
-        <div className="lg:ml-[24%] xl:ml-[20%] mt-28 px-4 lg:px-16 py-8">
+        <div className=" mt-28 px-4 lg:px-16 py-8">
             {/* Header Section */}
             <div className="flex flex-col mb-8">
                 <div className='flex items-center justify-between'>
@@ -317,77 +255,84 @@ const exportToExcel = async () => {
                         </button>
                     </div>
                     
-                    {/* Search with Button */}
-                    <div className=" hidden xl:flex gap-2">
-                        <div className="relative flex-1">
-                            <FiSearch className="absolute left-3 top-3 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search by email..."
-                                className="pl-10 pr-4 py-2 w-full border border-[#1A1466] text-black placeholder:text-black rounded-lg focus:outline-none transition-all"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                            />
-                        </div>
-                        <button 
-                            onClick={handleSearch}
-                            className="btn mr-24 btn-primary px-4 py-2 rounded-lg"
-                        >
-                            Search
-                        </button>
-                        {showSearchResults && (
-                            <button 
-                                onClick={handleClearSearch}
-                                className="btn bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
-                            >
-                                Clear
-                            </button>
-                        )}
-                    </div>
-                    
-                    {/* Dropdown Sort */}
-                    <div className="relative w-[200px]  md:w-auto whitespace-nowrap">
-                        <button 
-                            onClick={() => setIsSortOpen(!isSortOpen)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-black transition w-full md:w-auto"
-                        >
-                            <FiClock />
-                            {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
-                            <FiChevronDown className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        
-                        {isSortOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                                <div className="py-1">
-                                    <button
-                                        onClick={() => {
-                                            setSortOrder('newest');
-                                            setIsSortOpen(false);
-                                        }}
-                                        className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'newest' ? 'bg-primary-50 whitespace-nowrap text-primary' : 'text-black'}`}
-                                    >
-                                        Newest First
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setSortOrder('oldest');
-                                            setIsSortOpen(false);
-                                        }}
-                                        className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'oldest' ? 'bg-primary-50 text-primary' : 'text-black'}`}
-                                    >
-                                        Oldest First
-                                    </button>
+                    {/* Desktop Search and Sort */}
+                    {!isMobile && (
+                        <>
+                            {/* Search with Button */}
+                            <div className="hidden xl:flex gap-2">
+                                <div className="relative flex-1">
+                                    <FiSearch className="absolute left-3 top-3 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by email..."
+                                        className="pl-10 pr-4 py-2 w-full border border-[#1A1466] text-black placeholder:text-black rounded-lg focus:outline-none transition-all"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                    />
                                 </div>
+                                <button 
+                                    onClick={handleSearch}
+                                    className="btn mr-24 btn-primary px-4 py-2 rounded-lg"
+                                >
+                                    Search
+                                </button>
+                                {showSearchResults && (
+                                    <button 
+                                        onClick={handleClearSearch}
+                                        className="btn bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+
+
                             </div>
-                        )}
-                    </div>
+                            
+                            {/* Dropdown Sort */}
+                            <div className="relative w-[200px] md:w-auto whitespace-nowrap">
+                                <button 
+                                    onClick={() => setIsSortOpen(!isSortOpen)}
+                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-black transition w-full md:w-auto"
+                                >
+                                    <FiClock />
+                                    {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
+                                    <FiChevronDown className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                
+                                {isSortOpen && (
+                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                        <div className="py-1">
+                                            <button
+                                                onClick={() => {
+                                                    setSortOrder('newest');
+                                                    setIsSortOpen(false);
+                                                }}
+                                                className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'newest' ? 'bg-primary-50 whitespace-nowrap text-primary' : 'text-black'}`}
+                                            >
+                                                Newest First
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setSortOrder('oldest');
+                                                    setIsSortOpen(false);
+                                                }}
+                                                className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'oldest' ? 'bg-primary-50 text-primary' : 'text-black'}`}
+                                            >
+                                                Oldest First
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
 
-
-                {/* Mobile Search Bar */}
-
-                <div className=" flex mt-8 w-full  xl:hidden gap-2">
+                {/* Mobile Search and Sort */}
+                {isMobile && (
+                    <div className="flex  md:flex-row gap-4 mt-4 w-full">
+                        {/* Search Bar - Auto search on mobile */}
                         <div className="relative flex-1">
                             <FiSearch className="absolute left-3 top-3 text-gray-400" />
                             <input
@@ -396,24 +341,47 @@ const exportToExcel = async () => {
                                 className="pl-10 pr-4 py-2 w-full border border-[#1A1466] text-black placeholder:text-black rounded-lg focus:outline-none transition-all"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                             />
                         </div>
-                        <button 
-                            onClick={handleSearch}
-                            className="btn mr-24 btn-primary px-4 py-2 rounded-lg"
-                        >
-                            Search
-                        </button>
-                        {showSearchResults && (
+                        
+                        {/* Sort Dropdown - Moved to the left on mobile */}
+                        <div className="relative  text-sm md:text-lg md:w-auto">
                             <button 
-                                onClick={handleClearSearch}
-                                className="btn bg-gray-200 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
+                                onClick={() => setIsSortOpen(!isSortOpen)}
+                                className="flex items-center  gap-2 px-4 py-[10.5px] md:py-2 bg-gray-100 rounded-lg text-sm md:text-lg hover:bg-gray-200 text-black transition w-full"
                             >
-                                Clear
+                                <FiClock />
+                                {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
+                                <FiChevronDown className={`transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
                             </button>
-                        )}
+                            
+                            {isSortOpen && (
+                                <div className="absolute text-sm md:text-lg left-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => {
+                                                setSortOrder('newest');
+                                                setIsSortOpen(false);
+                                            }}
+                                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'newest' ? 'bg-primary-50 text-sm md:text-lg whitespace-nowrap text-primary' : 'text-black'}`}
+                                        >
+                                            Newest First
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortOrder('oldest');
+                                                setIsSortOpen(false);
+                                            }}
+                                            className={`block w-full text-left px-4 py-2 hover:bg-gray-100 ${sortOrder === 'oldest' ? 'bg-primary-50 text-sm md:text-lg text-primary' : 'text-black'}`}
+                                        >
+                                            Oldest First
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
+                )}
             </div>
 
             {/* Response Display */}
@@ -468,7 +436,7 @@ const exportToExcel = async () => {
                 </div>
             ) : (
                 /* Table View */
-                <div className="bg-white max-w-screen rounded-lg shadow-md overflow-hidden">
+                <div className="bg-white max-w-[calc(100vw-20px)] rounded-lg shadow-md overflow-scroll">
                     <DataTable
                         columns={columns}
                         data={tableData}

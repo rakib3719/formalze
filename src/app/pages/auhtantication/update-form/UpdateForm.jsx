@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit2, FiChevronDown, FiX, FiImage, FiUpload } from 'react-icons/fi';
 import { 
   FaRegCircle, 
   FaRegCheckSquare, 
@@ -31,14 +31,20 @@ const UpdateForm = ({data, isLoading, error}) => {
   const {refetch} = useGetForm()
   const user_id = session?.data?.user?.id;
   const [loading, setLoading] = useState(false)
+  const [uploadedFileName, setUploadedFileName] = useState('')
+  const fileInputRef = useRef(null)
   
   const initialForm = {
     title: data?.form_name || '',
     created_by: user_id,
     description: data?.description || '', 
+    logo: data?.logo || '',
+    logoFile: null, // Add this line
+    website_url: data?.website_url || '',
     fields: data?.fields || [],
     is_active: true
   };
+
 
   const [form, setForm] = useState(initialForm);
   const [editingFieldIndex, setEditingFieldIndex] = useState(null);
@@ -67,9 +73,14 @@ const UpdateForm = ({data, isLoading, error}) => {
         title: data.form_name,
         created_by: user_id,
         description: data.description,
+        logo: data.logo || '',
+        website_url: data.website_url || '',
         fields: data.fields,
         is_active: true
       });
+      if (data.logo) {
+        setUploadedFileName('Logo selected');
+      }
     }
   }, [data, user_id]);
 
@@ -198,6 +209,30 @@ const UpdateForm = ({data, isLoading, error}) => {
     updateField(fieldIndex, updatedField);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedFileName(file.name);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setForm(prev => ({
+          ...prev,
+          logo: reader.result // Store base64 for preview
+        }));
+      };
+      reader.readAsDataURL(file);
+      // Also store the file object for submission
+      setForm(prev => ({
+        ...prev,
+        logoFile: file
+      }));
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
   const router = useRouter();
 
   const updateForm = async () => {
@@ -213,27 +248,66 @@ const UpdateForm = ({data, isLoading, error}) => {
       setLoading(false);
       return;
     }
-
-    if(!updatedForm.description) {
-      toast.error('Description is required');
-      setLoading(false);
-      return;
-    }
+  
+    // if(!updatedForm.description) {
+    //   toast.error('Description is required');
+    //   setLoading(false);
+    //   return;
+    // }
     
     if(!updatedForm.title) {
       toast.error('Title is required');
       setLoading(false);
       return;
     }
-
-   if(user_id){
-    const resp = await publicAxios.put(`/form/list/${data.id}/`, updatedForm);
-    if(resp.status === 200){
-        toast.success('Updated successfully')
-        refetch()
-        router.push('/my-all-form')
+  
+    // Prepare form data for the request
+    const formData = new FormData();
+    
+    // Append all fields except logo
+    Object.keys(updatedForm).forEach(key => {
+      if (key !== 'logo' && key !== 'fields') {
+        formData.append(key, updatedForm[key]);
+      }
+    });
+    
+    // Handle logo separately
+    if (updatedForm.logo && typeof updatedForm.logo === 'string' && updatedForm.logo.startsWith('data:')) {
+      // If logo is a base64 string, convert it to a file
+      try {
+        const blob = await fetch(updatedForm.logo).then(r => r.blob());
+        const file = new File([blob], 'logo.png', { type: blob.type });
+        formData.append('logo', file);
+      } catch (error) {
+        console.error('Error converting logo:', error);
+        // If conversion fails, just skip the logo
+      }
+    } else if (updatedForm.logo instanceof File) {
+      // If logo is already a file object
+      formData.append('logo', updatedForm.logo);
     }
-   }
+    
+    // Handle fields array
+    formData.append('fields', JSON.stringify(updatedForm.fields));
+  
+    if(user_id){
+      try {
+        const resp = await publicAxios.put(`/form/list/${data.id}/`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        if(resp.status === 200){
+          toast.success('Updated successfully');
+          refetch();
+          router.push('/my-all-form');
+        }
+      } catch (error) {
+        toast.error('Error updating form');
+        console.error('Update error:', error);
+        setLoading(false);
+      }
+    }
   };
 
   const fieldTypes = [
@@ -463,7 +537,7 @@ const UpdateForm = ({data, isLoading, error}) => {
   }
 
   return (
-    <div className=' px-4 md:px-8 xl:ml-[20%] lg:ml-[25%]'>
+    <div className=' px-4 md:px-8 '>
       <div className="text-black mt-28 rounded-2xl border border-[#1A1466] overflow-hidden mb-8 bg-white">
         {/* Form Header */}
         <div className="bg-gradient-to-r from-[#1A1466] to-[#8886CD] px-6 py-5">
@@ -504,6 +578,52 @@ const UpdateForm = ({data, isLoading, error}) => {
               value={form.description}
               onChange={(e) => setForm({...form, description: e.target.value})}
             />
+            
+            {/* Logo and Website URL Fields */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center">
+                <button
+                  onClick={triggerFileInput}
+                  className="bg-[#E9E9FD] text-[#1A1466] px-4 py-2 rounded-md text-sm hover:bg-[#D9D9FD] flex items-center"
+                >
+                  <FiUpload className="mr-2" />
+                  {form.logo ? 'Change Logo' : 'Upload Logo'}
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*"
+                />
+                {form.logo && (
+                  <div className="ml-4 flex items-center">
+                    <span className="text-sm text-[#1A1466] mr-2">
+                      {uploadedFileName || 'Logo selected'}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setForm(prev => ({...prev, logo: ''}))
+                        setUploadedFileName('')
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <input
+                  type="url"
+                  className="w-full text-sm border-b border-transparent hover:border-[#CCCAEC] focus:border-[#1A1466] focus:border-b-2 duration-300 focus:outline-none py-2 bg-transparent"
+                  placeholder="Website URL (optional)"
+                  value={form.website_url}
+                  onChange={(e) => setForm({...form, website_url: e.target.value})}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Form Fields */}

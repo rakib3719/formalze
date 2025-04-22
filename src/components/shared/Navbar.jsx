@@ -9,27 +9,45 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import usePublicAxios from '@/hooks/usePublicAxios';
+import { FaUser, FaUserCircle } from 'react-icons/fa';
+import useGetNotification from '@/hooks/notification/userGetNotification';
+import { IoReload } from 'react-icons/io5';
 
 const Navbar = () => {
     // Hooks and state
     const pathname = usePathname();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const profileRef = useRef(null);
+    const notificationRef = useRef(null);
     const session = useSession();
     const user = session?.data?.user;
     const publicAxios = usePublicAxios();
+    const { data: notifications, refetch } = useGetNotification();
 
-    // Close dropdown when clicking outside
+    // Close dropdowns when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (profileRef.current && !profileRef.current.contains(event.target)) {
                 setIsProfileOpen(false);
+            }
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+
+    // Auto-refetch notifications every 3 minutes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            refetch();
+        }, 3 * 60 * 1000); // 3 minutes in milliseconds
+
+        return () => clearInterval(interval); // Cleanup on unmount
+    }, [refetch]);
 
     // Handle logout functionality
     const handleLogout = async () => {
@@ -44,79 +62,164 @@ const Navbar = () => {
             }
         } catch (error) {
             console.error('Logout error:', error);
-            // Proceed with logout even if API fails
             await signOut({ redirect: false });
             window.location.href = '/sign-in';
         }
     };
-    if( pathname.includes('/formView') && !user){
+
+    // Mark notification as read and delete it
+    const markAsRead = async (id) => {
+        try {
+            await publicAxios.post(`/notification/read/${id}`, null, {
+                headers: { 'Authorization': `Token ${user?.token}` }
+            });
+            refetch(); // Refetch notifications to update the list
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    // Mark all notifications as read
+    const markAllAsRead = async () => {
+        try {
+            const unreadNotifications = notifications?.filter(n => !n.read) || [];
+            const promises = unreadNotifications.map(n => 
+                publicAxios.post(`/notification/read/${n.id}`, null, {
+                    headers: { 'Authorization': `Token ${user?.token}` }
+                })
+            );
+            await Promise.all(promises);
+            refetch();
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    };
+
+    if(pathname.includes('/formView') && !user){
         return null;
     }
 
-    // Don't render navbar on auth pages
-    if ( pathname.includes('/sign-in') || pathname.includes('/sign-up') || pathname.includes('/frontend')  ) {
+    if (pathname.includes('/sign-in') || pathname.includes('/sign-up') || pathname.includes('/frontend')) {
         return null;
     }
 
-    // Navigation links data
-    const navLinks = [
-        { href: '/', label: 'Home' },
-        { href: '/how-its-works', label: 'How it\'s Work' },
-        { href: '/feature', label: 'Feature' },
-        { href: '/templates', label: 'Templates' },
-        { href: '/pricing', label: 'Pricing' },
-        { href: '/my-form', label: 'My Form' }
-    ];
+    // Calculate unread count
+    const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
     return (
-        <header className='flex custom-navbar-shadow font-outfit py-4 z-40 px-2 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
-            {/* Logo */}
-
-
-
-                
+        <header className='flex custom-navbar-shadow font-outfit py-4 z-50 px-2 sticky top-0 md:px-8 mx-auto custom-bg-navbar items-center justify-between'>
             {/* Logo Section */}
             <div>
-              <Link
-              href={'/'}
-              className='cursor-pointer mt-16 lg:mt-0 ml-32 lg:ml-0'>
-                <Image 
-                    alt='FormLazy Logo' 
-                    height={180} 
-                    width={180} 
-                    src={logoImg} 
-                    className={`w-24 ${user ? '-mt-[20px]' : '-mt-[28px]'} lg:-mt-0 ml-16 lg:ml-0 lg:w-auto`}
-                    priority
-                />
-              </Link>
+                <Link href={'/'} className='cursor-pointer mt-16 lg:mt-0 ml-32 lg:ml-0'>
+                    <Image 
+                        alt='FormLazy Logo' 
+                        height={180} 
+                        width={180} 
+                        src={logoImg} 
+                        className={`w-24 ${user ? '-mt-[24px]' : '-mt-[28px]'} lg:-mt-0 ml-16 lg:ml-0 lg:w-auto`}
+                        priority
+                    />
+                </Link>
             </div>
             
             {/* Navigation Links */}
             <nav>
-                {/* <ul className='text-white mt-2 text-sm lg:text-lg flex gap-8'>
-                    {navLinks.map((link) => (
-                        <li key={link.href}>
-                            <Link 
-                                href={link.href} 
-                                className='hover:text-primary-200 transition-colors'
-                            >
-                                {link.label}
-                            </Link>
-                        </li>
-                    ))}
-                </ul> */}
+                {/* Navigation links commented out as per original */}
             </nav>
             
             {/* Icons Section */}
-           {user ? (
-                <div className='flex items-center gap-6'>
-                    {/* Notification Button */}
-                    <button 
-                        className='relative'
-                        aria-label='Notifications'
-                    >
-                        <IoIosNotificationsOutline className='text-[30px] lg:text-[40px] text-white cursor-pointer hover:text-primary-200 transition-colors' />
-                    </button>
+            {user ? (
+                <div className='flex z-50 relative items-center gap-6'>
+                    {/* Notification Button with Dropdown */}
+                    <div className='relative' ref={notificationRef}>
+                        <button 
+                            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                            className='relative p-1'
+                            aria-label='Notifications'
+                        >
+                            <IoIosNotificationsOutline className='text-[30px]  z-40 lg:text-[40px] text-white cursor-pointer hover:text-primary-200 transition-colors' />
+                            {unreadCount > 0 && (
+                                <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center'>
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+                        
+                        {/* Notification Dropdown */}
+                        {isNotificationOpen && (
+                            <div className='absolute  -right-6 lg:right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-30 overflow-hidden border border-gray-200'>
+                                <div className='p-4 border-b border-gray-100 flex justify-between items-center'>
+                                    <h3 className='font-semibold text-gray-800'>Notifications</h3>
+                                    <div className='flex items-center gap-2'>
+                                        <button 
+                                            onClick={() => refetch()}
+                                            className='text-sm text-blue-500 hover:text-blue-700 flex items-center'
+                                            aria-label='Refresh notifications'
+                                        >
+                                            <IoReload className='text-lg mr-1' />
+                                            Refresh
+                                        </button>
+                                        <button 
+                                            onClick={markAllAsRead}
+                                            className='text-xs text-blue-500 hover:text-blue-700'
+                                        >
+                                            Mark all as read
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div className='max-h-96 overflow-y-auto'>
+                                    {notifications?.length > 0 ? (
+                                        notifications.map((notification) => (
+                                            <div 
+                                                key={notification.id}
+                                                className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <div className='flex items-start gap-3'>
+                                                    <span className='text-xl mt-1'>📝</span>
+                                                    <div className='flex-1'>
+                                                        <div className='flex justify-between items-start'>
+                                                            <div>
+                                                                <h4 className={`font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
+                                                                    Form Submission
+                                                                </h4>
+                                                                <p className='text-sm text-gray-600 mt-1'>{notification.message}</p>
+                                                                <p className='text-xs text-gray-400 mt-2'>
+                                                                    {new Date(notification.created_at).toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                            {!notification.read && (
+                                                                <button
+                                                                    onClick={() => markAsRead(notification.id)}
+                                                                    className='text-xs text-blue-500 hover:text-blue-700 font-medium'
+                                                                >
+                                                                    Mark as read
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className='px-4 py-6 text-center text-gray-500'>
+                                            No notifications available
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className='p-3 border-t border-gray-100 text-center'>
+                                    <Link 
+                                        href="/notifications" 
+                                        className='text-sm text-blue-500 hover:text-blue-700 font-medium'
+                                        onClick={() => setIsNotificationOpen(false)}
+                                    >
+                                        View all notifications
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     
                     {/* Profile Dropdown */}
                     <div className='relative' ref={profileRef}>
@@ -125,30 +228,16 @@ const Navbar = () => {
                             className='flex items-center gap-1 focus:outline-none'
                             aria-label='User profile'
                         >
-                            <FaRegCircleUser className='text-[30px] lg:text-[40px] text-white hover:text-primary-200 cursor-pointer transition-colors' />
+                            <FaUserCircle className='text-[30px] lg:text-[40px] text-white hover:text-primary-200 cursor-pointer transition-colors' />
                         </button>
                         
-                        {/* Dropdown Menu */}
                         {isProfileOpen && (
                             <div className='absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 overflow-hidden border border-gray-100'>
                                 <div className='py-1'>
-                                    {/* User Info */}
                                     <div className='px-4 py-3 border-b border-gray-100'>
                                         <p className='text-sm font-medium text-gray-800'>{user?.username}</p>
                                         <p className='text-xs text-gray-500 truncate'>{user?.email}</p>
                                     </div>
-                                    
-                                    {/* Profile Link */}
-                                    <Link 
-                                        href="/profile" 
-                                        className='flex cursor-pointer items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
-                                        onClick={() => setIsProfileOpen(false)}
-                                    >
-                                        <FiUser className='mr-3 text-gray-500' />
-                                        View Profile
-                                    </Link>
-                                    
-                                    {/* Logout Button */}
                                     <button 
                                         onClick={handleLogout}
                                         className='w-full flex cursor-pointer items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors'
